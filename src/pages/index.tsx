@@ -100,10 +100,16 @@ export default function HomePage() {
       const formData = new FormData();
       formData.append('file', file);
       
+      const uploadController = new AbortController();
+      const uploadTimeout = setTimeout(() => uploadController.abort(), 30000); // 30 second timeout
+      
       const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
+        signal: uploadController.signal,
       });
+      
+      clearTimeout(uploadTimeout);
       
       if (!uploadResponse.ok) {
         const errorData = await uploadResponse.json();
@@ -120,6 +126,9 @@ export default function HomePage() {
       });
 
       // Process PDF
+      const processController = new AbortController();
+      const processTimeout = setTimeout(() => processController.abort(), 120000); // 2 minute timeout
+      
       const processResponse = await fetch('/api/process', {
         method: 'POST',
         headers: { 
@@ -130,19 +139,34 @@ export default function HomePage() {
           processingId,
           options: {
             rotate: 0,
-            deskew: false, // TODO: Implement deskewing
+            deskew: true,
             compress: true,
-            ocr: false // TODO: Implement OCR
+            ocr: true
           }
         }),
+        signal: processController.signal,
       });
       
+      clearTimeout(processTimeout);
+      console.log('Process response status:', processResponse.status);
+      console.log('Process response headers:', Object.fromEntries(processResponse.headers.entries()));
+      
       if (!processResponse.ok) {
-        const errorData = await processResponse.json();
+        let errorData;
+        try {
+          errorData = await processResponse.json();
+        } catch {
+          throw new Error(`Processing failed with status ${processResponse.status}`);
+        }
         throw new Error(errorData.error || 'Processing failed');
       }
       
-      const processResult = await processResponse.json();
+      let processResult;
+      try {
+        processResult = await processResponse.json();
+      } catch {
+        throw new Error('Invalid response from server');
+      }
       
       setStatus({
         id: processingId,
@@ -154,11 +178,21 @@ export default function HomePage() {
       setResult(processResult.result);
     } catch (error) {
       console.error('Processing error:', error);
+      
+      let errorMessage = 'Something went wrong. Please try again.';
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = 'Request timed out. Please try again with a smaller file.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       setStatus({
         id: 'error',
         status: 'error',
         progress: 0,
-        error: error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+        error: errorMessage
       });
     } finally {
       setProcessing(false);

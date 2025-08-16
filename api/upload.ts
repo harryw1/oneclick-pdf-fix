@@ -50,6 +50,13 @@ export default async function handler(
     });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ error: 'Failed to upload file' });
+    
+    // Ensure we always send valid JSON
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: 'Failed to upload file',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   }
 }

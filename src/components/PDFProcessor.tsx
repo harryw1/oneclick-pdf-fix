@@ -48,10 +48,21 @@ export default function PDFProcessor({ processingId, originalFile, onProcessComp
       });
 
       if (!response.ok) {
-        throw new Error('Processing failed');
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          throw new Error(`Processing failed with status ${response.status}`);
+        }
+        throw new Error(errorData.error || 'Processing failed');
       }
 
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch {
+        throw new Error('Invalid response from server');
+      }
       onProcessComplete(result.result);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Processing failed');
