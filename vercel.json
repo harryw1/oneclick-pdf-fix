@@ -1,9 +1,11 @@
 {
   "functions": {
     "src/pages/api/**/*.ts": {
-      "maxDuration": 120,
-      "maxRequestBodySize": "100mb"
+      "maxDuration": 120
     }
+  },
+  "limits": {
+    "maxRequestBodySize": "100mb"
   },
   "build": {
     "env": {
