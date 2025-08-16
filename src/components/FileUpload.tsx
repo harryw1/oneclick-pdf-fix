@@ -3,11 +3,14 @@
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, X, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import type { ProcessingStatus } from '@/types/pdf';
+
+interface ProcessingStatus {
+  id: string;
+  status: 'uploading' | 'processing' | 'completed' | 'error';
+  progress: number;
+  message?: string;
+  error?: string;
+}
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -42,49 +45,45 @@ export default function FileUpload({ onFileSelect, processing, status }: FileUpl
 
   return (
     <div className="w-full max-w-2xl mx-auto animate-fade-in">
-      <Card className="overflow-hidden">
+      <div className="card-modern">
         <div
           {...getRootProps()}
-          className={cn(
-            "upload-zone",
-            isDragActive && "dragover",
-            processing && "opacity-60 cursor-not-allowed",
-            !processing && "cursor-pointer"
-          )}
+          className={`upload-zone ${isDragActive ? 'dragover' : ''} ${
+            processing ? 'opacity-60 cursor-not-allowed' : ''
+          }`}
         >
           <input {...getInputProps()} />
           
           {!selectedFile ? (
             <div className="space-y-6 animate-slide-up">
               <div className="relative">
-                <Upload className={cn(
-                  "mx-auto h-16 w-16 transition-all duration-300",
-                  isDragActive ? "text-primary scale-110" : "text-muted-foreground group-hover:text-primary group-hover:scale-105"
-                )} />
-                <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <Upload className={`mx-auto h-16 w-16 transition-all duration-300 ${
+                  isDragActive ? 'text-blue-500 scale-110' : 'text-gray-400 group-hover:text-blue-500 group-hover:scale-105'
+                }`} />
+                <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
-              <div className="space-y-2">
-                <p className="text-xl font-semibold text-foreground">
+              <div className="space-y-3">
+                <p className="text-2xl font-bold text-gray-800">
                   {isDragActive ? '✨ Drop your PDF here' : 'Drag and drop your PDF'}
                 </p>
-                <p className="text-muted-foreground">
+                <p className="text-gray-600">
                   or click to browse • Max 100MB
                 </p>
-                <Badge variant="secondary" className="mx-auto">
+                <div className="inline-block bg-gray-100 text-gray-700 text-sm font-medium px-3 py-1 rounded-full">
                   PDF files only
-                </Badge>
+                </div>
               </div>
             </div>
           ) : (
             <div className="flex items-center justify-between animate-slide-up">
               <div className="flex items-center space-x-4">
                 <div className="relative">
-                  <FileText className="h-10 w-10 text-red-500" />
-                  <CheckCircle2 className="h-5 w-5 text-green-500 absolute -top-1 -right-1 bg-background rounded-full" />
+                  <FileText className="h-12 w-12 text-red-500" />
+                  <CheckCircle2 className="h-6 w-6 text-green-500 absolute -top-1 -right-1 bg-white rounded-full" />
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-foreground">{selectedFile.name}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="font-bold text-gray-800 text-lg">{selectedFile.name}</p>
+                  <p className="text-gray-600">
                     {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB
                   </p>
                 </div>
@@ -95,64 +94,71 @@ export default function FileUpload({ onFileSelect, processing, status }: FileUpl
                     e.stopPropagation();
                     clearFile();
                   }}
-                  className="p-2 hover:bg-muted rounded-lg transition-colors"
+                  className="p-3 hover:bg-gray-100 rounded-xl transition-colors"
                 >
-                  <X className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+                  <X className="h-6 w-6 text-gray-400 hover:text-gray-600" />
                 </button>
               )}
             </div>
           )}
         </div>
-      </Card>
+      </div>
 
       {fileRejections.length > 0 && (
-        <Card className="mt-4 border-destructive/50 bg-destructive/5 animate-slide-up">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-4 w-4 text-destructive" />
-              <p className="text-sm text-destructive">
+        <div className="mt-4 card-modern border-red-200 bg-red-50 animate-slide-up">
+          <div className="p-4">
+            <div className="flex items-center space-x-3">
+              <AlertCircle className="h-5 w-5 text-red-500" />
+              <p className="text-red-700 font-medium">
                 {fileRejections[0].errors[0].message}
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {status && (
-        <Card className="mt-4 animate-slide-up">
-          <CardContent className="p-6">
+        <div className="mt-6 card-modern animate-slide-up">
+          <div className="p-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3">
                   {status.status === 'completed' ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <CheckCircle2 className="h-6 w-6 text-green-500" />
                   ) : status.status === 'error' ? (
-                    <AlertCircle className="h-5 w-5 text-destructive" />
+                    <AlertCircle className="h-6 w-6 text-red-500" />
                   ) : (
-                    <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                    <div className="h-6 w-6 rounded-full border-3 border-blue-500 border-t-transparent animate-spin" />
                   )}
-                  <p className="font-medium capitalize">{status.status}</p>
+                  <p className="font-bold text-lg capitalize text-gray-800">{status.status}</p>
                 </div>
-                <Badge variant={status.status === 'completed' ? 'success' : 'default'}>
+                <div className={`px-3 py-1 rounded-full text-sm font-bold ${
+                  status.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                }`}>
                   {status.progress}%
-                </Badge>
+                </div>
               </div>
               
-              <Progress value={status.progress} className="h-3" />
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${status.progress}%` }}
+                />
+              </div>
               
               {status.message && (
-                <p className="text-sm text-muted-foreground">{status.message}</p>
+                <p className="text-gray-600">{status.message}</p>
               )}
               
               {status.error && (
-                <p className="text-sm text-destructive flex items-center space-x-1">
+                <p className="text-red-600 flex items-center space-x-2">
                   <AlertCircle className="h-4 w-4" />
                   <span>{status.error}</span>
                 </p>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
     </div>
   );
