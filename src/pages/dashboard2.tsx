@@ -3,6 +3,7 @@ import { FileText, Calendar, Download } from 'lucide-react'
 import AuthWrapper2 from '@/components/AuthWrapper2'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { GetServerSideProps } from 'next'
 
 interface UserProfile {
   id: string
@@ -207,4 +208,11 @@ export default function Dashboard2Page() {
       </div>
     </AuthWrapper2>
   )
+}
+
+// Force client-side rendering to avoid build issues with Supabase
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    props: {}
+  }
 }
