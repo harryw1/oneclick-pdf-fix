@@ -1,7 +1,44 @@
 import Head from 'next/head';
-import { Check, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Check, Zap, Sparkles, ArrowRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function PricingPage() {
+  const plans = [
+    {
+      name: 'Free',
+      price: 0,
+      description: 'Perfect for occasional use',
+      features: [
+        '10 pages per week',
+        'Basic PDF processing',
+        'Auto-rotation & compression',
+        'Instant download',
+        'Email support'
+      ],
+      cta: 'Get Started Free',
+      popular: false
+    },
+    {
+      name: 'Pro',
+      price: 4,
+      description: 'For power users and professionals',
+      features: [
+        'Unlimited pages',
+        'Advanced OCR & deskewing',
+        '90-day document storage',
+        'Priority processing',
+        'Batch processing',
+        'API access',
+        'Priority support'
+      ],
+      cta: 'Upgrade to Pro',
+      popular: true
+    }
+  ];
+
   return (
     <>
       <Head>
@@ -9,97 +46,111 @@ export default function PricingPage() {
         <meta name="description" content="Choose your plan for unlimited PDF processing" />
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white shadow-sm">
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-100/50">
+        <header className="glass-effect border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center">
-              <a href="/" className="text-2xl font-bold text-gray-900">OneClick PDF Fixer</a>
-              <a href="/dashboard" className="btn-primary">Dashboard</a>
+              <div className="flex items-center space-x-2">
+                <div className="h-8 w-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-white" />
+                </div>
+                <a href="/" className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+                  OneClick PDF Fixer
+                </a>
+              </div>
+              <Button asChild>
+                <a href="/dashboard">Dashboard</a>
+              </Button>
             </div>
           </div>
         </header>
 
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Choose Your Plan</h1>
-            <p className="text-xl text-gray-600">Start free, upgrade when you need more</p>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center mb-16 animate-fade-in">
+            <Badge variant="secondary" className="mb-6">
+              Simple, transparent pricing
+            </Badge>
+            <h1 className="text-5xl font-bold text-foreground mb-4">Choose Your Plan</h1>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Start free, upgrade when you need more. No hidden fees, cancel anytime.
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-            {/* Free Plan */}
-            <div className="bg-white rounded-lg shadow-lg p-8">
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">Free</h3>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold">$0</span>
-                  <span className="text-gray-500">/month</span>
-                </div>
-              </div>
-              
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center">
-                  <Check className="h-5 w-5 text-green-500 mr-3" />
-                  <span>10 pages per week</span>
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-5 w-5 text-green-500 mr-3" />
-                  <span>Basic PDF processing</span>
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-5 w-5 text-green-500 mr-3" />
-                  <span>Auto-rotation & compression</span>
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-5 w-5 text-green-500 mr-3" />
-                  <span>Instant download</span>
-                </li>
-              </ul>
-              
-              <button className="w-full btn-secondary">
-                Get Started Free
-              </button>
-            </div>
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {plans.map((plan, index) => (
+              <Card key={plan.name} className={cn(
+                "relative overflow-hidden transition-all duration-300 hover:shadow-xl animate-slide-up",
+                plan.popular && "ring-2 ring-primary scale-105 shadow-2xl"
+              )} style={{ animationDelay: `${index * 200}ms` }}>
+                {plan.popular && (
+                  <div className="absolute top-0 right-0 bg-gradient-to-l from-primary-500 to-primary-600 text-white text-xs font-bold px-4 py-2 rounded-bl-lg">
+                    <div className="flex items-center space-x-1">
+                      <Zap className="h-3 w-3" />
+                      <span>MOST POPULAR</span>
+                    </div>
+                  </div>
+                )}
+                
+                <CardHeader className={cn(
+                  "text-center pb-8",
+                  plan.popular && "bg-gradient-to-b from-primary-500/5 to-transparent"
+                )}>
+                  <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
+                  <div className="mt-4">
+                    <span className="text-5xl font-bold">${plan.price}</span>
+                    <span className="text-muted-foreground ml-1">/month</span>
+                  </div>
+                  <p className="text-muted-foreground mt-2">{plan.description}</p>
+                </CardHeader>
+                
+                <CardContent className="space-y-6">
+                  <ul className="space-y-4">
+                    {plan.features.map((feature, featureIndex) => (
+                      <li key={featureIndex} className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          <Check className="h-5 w-5 text-green-500" />
+                        </div>
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  
+                  <Button 
+                    className={cn(
+                      "w-full h-12 text-base font-semibold transition-all duration-200",
+                      plan.popular && "bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg hover:shadow-xl"
+                    )}
+                    variant={plan.popular ? "default" : "outline"}
+                  >
+                    {plan.cta}
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-            {/* Pro Plan */}
-            <div className="bg-primary-600 rounded-lg shadow-lg p-8 text-white relative">
-              <div className="absolute top-4 right-4">
-                <span className="bg-primary-500 text-xs font-bold px-2 py-1 rounded">POPULAR</span>
-              </div>
+          {/* FAQ Section */}
+          <div className="mt-20 text-center">
+            <h3 className="text-2xl font-bold text-foreground mb-8">Frequently Asked Questions</h3>
+            <div className="grid md:grid-cols-2 gap-6 text-left">
+              <Card className="animate-slide-up" style={{ animationDelay: '400ms' }}>
+                <CardContent className="p-6">
+                  <h4 className="font-semibold mb-2">Is my data secure?</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Yes! All uploads are processed securely and deleted after processing. Pro users get 90-day storage with encrypted backups.
+                  </p>
+                </CardContent>
+              </Card>
               
-              <div className="text-center mb-6">
-                <h3 className="text-2xl font-bold">Pro</h3>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold">$4</span>
-                  <span className="text-primary-200">/month</span>
-                </div>
-              </div>
-              
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center">
-                  <Check className="h-5 w-5 text-primary-200 mr-3" />
-                  <span>Unlimited pages</span>
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-5 w-5 text-primary-200 mr-3" />
-                  <span>Advanced OCR & deskewing</span>
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-5 w-5 text-primary-200 mr-3" />
-                  <span>90-day document storage</span>
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-5 w-5 text-primary-200 mr-3" />
-                  <span>Priority processing</span>
-                </li>
-                <li className="flex items-center">
-                  <Zap className="h-5 w-5 text-primary-200 mr-3" />
-                  <span>Batch processing</span>
-                </li>
-              </ul>
-              
-              <button className="w-full bg-white text-primary-600 font-medium py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors">
-                Upgrade to Pro
-              </button>
+              <Card className="animate-slide-up" style={{ animationDelay: '500ms' }}>
+                <CardContent className="p-6">
+                  <h4 className="font-semibold mb-2">Can I cancel anytime?</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Absolutely! Cancel your Pro subscription anytime. You'll retain Pro features until the end of your billing period.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>

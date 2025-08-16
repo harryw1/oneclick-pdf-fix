@@ -3,7 +3,11 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import FileUpload from '@/components/FileUpload';
-import { Download, Zap, Shield, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Download, Zap, Shield, Clock, Star, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { ProcessingStatus } from '@/types/pdf';
 
 export default function HomePage() {
@@ -84,6 +88,33 @@ export default function HomePage() {
     }
   };
 
+  const features = [
+    {
+      icon: Zap,
+      title: "Auto-Rotate",
+      description: "Intelligent rotation detection",
+      color: "text-yellow-500"
+    },
+    {
+      icon: Shield,
+      title: "Deskew",
+      description: "Straighten crooked scans",
+      color: "text-green-500"
+    },
+    {
+      icon: Download,
+      title: "Compress",
+      description: "Optimize file size",
+      color: "text-blue-500"
+    },
+    {
+      icon: Clock,
+      title: "OCR Search",
+      description: "Make text searchable",
+      color: "text-purple-500"
+    }
+  ];
+
   return (
     <>
       <Head>
@@ -92,88 +123,121 @@ export default function HomePage() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-100/50">
         {/* Header */}
-        <header className="bg-white shadow-sm">
+        <header className="glass-effect border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center">
-              <h1 className="text-2xl font-bold text-gray-900">OneClick PDF Fixer</h1>
-              <div className="flex space-x-4">
-                <a href="/pricing" className="btn-secondary">Pricing</a>
-                <a href="/dashboard" className="btn-primary">Dashboard</a>
+              <div className="flex items-center space-x-2">
+                <div className="h-8 w-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
+                  <Sparkles className="h-5 w-5 text-white" />
+                </div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+                  OneClick PDF Fixer
+                </h1>
+              </div>
+              <div className="flex space-x-3">
+                <Button variant="ghost" asChild>
+                  <a href="/pricing">Pricing</a>
+                </Button>
+                <Button asChild>
+                  <a href="/dashboard">Dashboard</a>
+                </Button>
               </div>
             </div>
           </div>
         </header>
 
         {/* Hero Section */}
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Fix Your PDFs in <span className="text-primary-600">One Click</span>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center mb-16 animate-fade-in">
+            <div className="inline-flex items-center space-x-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
+              <Star className="h-4 w-4" />
+              <span>Trusted by 10,000+ users</span>
+            </div>
+            
+            <h2 className="text-5xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
+              Fix Your PDFs in{' '}
+              <span className="bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent">
+                One Click
+              </span>
             </h2>
-            <p className="text-xl text-gray-600 mb-8">
-              Drag in a mis-scanned or sideways PDF and get back a copy that's rotated, deskewed, compressed and OCR-searchable.
+            
+            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
+              Transform mis-scanned or sideways PDFs into perfect, searchable documents. 
+              No software needed — just drag, drop, and download.
             </p>
             
-            {/* Features */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-              <div className="text-center">
-                <Zap className="h-8 w-8 text-primary-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-700">Auto-Rotate</p>
-              </div>
-              <div className="text-center">
-                <Shield className="h-8 w-8 text-primary-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-700">Deskew</p>
-              </div>
-              <div className="text-center">
-                <Download className="h-8 w-8 text-primary-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-700">Compress</p>
-              </div>
-              <div className="text-center">
-                <Clock className="h-8 w-8 text-primary-500 mx-auto mb-2" />
-                <p className="text-sm font-medium text-gray-700">OCR Search</p>
-              </div>
+            {/* Features Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
+              {features.map((feature, index) => (
+                <Card key={feature.title} className="group hover:shadow-lg transition-all duration-300 animate-slide-up border-0 bg-white/50 backdrop-blur-sm" style={{ animationDelay: `${index * 100}ms` }}>
+                  <CardContent className="p-6 text-center">
+                    <feature.icon className={cn("h-8 w-8 mx-auto mb-3 transition-transform group-hover:scale-110", feature.color)} />
+                    <h3 className="font-semibold text-foreground mb-1">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
 
           {/* Upload Area */}
-          <FileUpload
-            onFileSelect={handleFileSelect}
-            processing={processing}
-            status={status}
-          />
+          <div className="mb-16">
+            <FileUpload
+              onFileSelect={handleFileSelect}
+              processing={processing}
+              status={status}
+            />
+          </div>
 
           {/* Download Result */}
           {result && (
-            <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900">PDF Processed Successfully!</h3>
-                  <p className="text-sm text-gray-500">
-                    {result.pageCount} pages " {(result.fileSize / (1024 * 1024)).toFixed(1)} MB
-                  </p>
+            <Card className="animate-bounce-in glass-effect">
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <CheckCircle2 className="h-6 w-6 text-green-500" />
+                  <span>PDF Processed Successfully!</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">
+                      {result.pageCount} pages • {(result.fileSize / (1024 * 1024)).toFixed(1)} MB
+                    </p>
+                    <div className="flex space-x-2">
+                      <Badge variant="success">Rotated</Badge>
+                      <Badge variant="success">Compressed</Badge>
+                      <Badge variant="success">OCR Ready</Badge>
+                    </div>
+                  </div>
+                  <Button asChild size="lg" className="shadow-lg">
+                    <a href={result.downloadUrl} download>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </a>
+                  </Button>
                 </div>
-                <a
-                  href={result.downloadUrl}
-                  download
-                  className="btn-primary flex items-center space-x-2"
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Download</span>
-                </a>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Free Tier Notice */}
-          <div className="mt-12 text-center">
-            <p className="text-sm text-gray-500">
-              Free tier: 10 pages per week " 
-              <a href="/pricing" className="text-primary-600 hover:text-primary-700 font-medium">
-                Upgrade to Pro
-              </a> for unlimited processing
-            </p>
+          <div className="text-center mt-16">
+            <Card className="inline-block bg-gradient-to-r from-primary-500 to-primary-600 text-white border-0">
+              <CardContent className="p-6">
+                <p className="font-medium">
+                  Free tier: 10 pages per week • 
+                  <Button variant="link" asChild className="text-white hover:text-primary-100 p-0 ml-2 font-semibold">
+                    <a href="/pricing" className="inline-flex items-center">
+                      Upgrade to Pro
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </a>
+                  </Button>
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
