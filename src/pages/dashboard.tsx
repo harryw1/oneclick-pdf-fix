@@ -2,7 +2,7 @@ import Head from 'next/head';
 import { FileText, Calendar, Download } from 'lucide-react';
 import AuthWrapper from '@/components/AuthWrapper';
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/utils/supabase/client';
 import { GetServerSideProps } from 'next';
 
 interface UserProfile {
@@ -17,37 +17,27 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [authToken, setAuthToken] = useState<string | null>(null);
-  
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'placeholder',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
-  );
 
   useEffect(() => {
+    const supabase = createClient();
     const getProfile = async () => {
-      // Skip if environment variables aren't set (during build)
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
-        console.log('Skipping auth - no env vars');
-        setLoading(false);
-        return;
-      }
-
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { user }, error } = await supabase.auth.getUser();
         
-        if (session?.user) {
-          setAuthToken(session.access_token);
+        if (user) {
+          const { data: { session } } = await supabase.auth.getSession();
+          setAuthToken(session?.access_token || null);
           
           const { data: profile, error: profileError } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('id', user.id)
             .single();
             
           if (profile) {
             setProfile({
-              id: session.user.id,
-              email: session.user.email!,
+              id: user.id,
+              email: user.email!,
               plan: profile.plan || 'free',
               usage_this_week: profile.usage_this_week || 0,
               total_pages_processed: profile.total_pages_processed || 0
@@ -56,7 +46,7 @@ export default function DashboardPage() {
             console.error('Profile not found:', profileError);
           }
         } else {
-          // No session found - clear state but still stop loading
+          // No user found - clear state but still stop loading
           setProfile(null);
           setAuthToken(null);
         }
@@ -97,9 +87,10 @@ export default function DashboardPage() {
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
 
   const handleSignOut = async () => {
+    const supabase = createClient();
     await supabase.auth.signOut();
     window.location.href = '/';
   };

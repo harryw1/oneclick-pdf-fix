@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,34 +19,25 @@ export default function AuthWrapper({ children, requireAuth = false }: AuthWrapp
   const [authLoading, setAuthLoading] = useState(false);
   const [message, setMessage] = useState<string>('');
   const [isTransitioning, setIsTransitioning] = useState(false);
-  
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'placeholder',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
-  );
 
   useEffect(() => {
-    // Skip if environment variables aren't set (during build)
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
-      setLoading(false);
-      return;
-    }
-
-    const getSession = async () => {
+    const supabase = createClient();
+    
+    const getUser = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { user }, error } = await supabase.auth.getUser();
         if (error) {
-          console.error('Session error:', error);
+          console.error('Get user error:', error);
         }
-        setUser(session?.user ?? null);
+        setUser(user);
       } catch (error) {
-        console.error('Failed to get session:', error);
+        console.error('Failed to get user:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    getSession();
+    getUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -61,25 +52,35 @@ export default function AuthWrapper({ children, requireAuth = false }: AuthWrapp
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
 
   const handleAuth = async (email: string, password: string) => {
     setAuthLoading(true);
     setMessage('');
     
     try {
+      const supabase = createClient();
+      
       if (isSignUp) {
+        console.log('Attempting to sign up user:', email);
         const { data, error } = await supabase.auth.signUp({
           email,
           password
         });
         
+        console.log('SignUp response:', { data, error });
+        
         if (error) throw error;
         
         if (data.user && !data.session) {
-          setMessage('Please check your email to confirm your account!');
+          console.log('User created but needs email confirmation');
+          setMessage('Account created! Please check your email to confirm your account.');
         } else if (data.session) {
-          setMessage('Account created successfully!');
+          console.log('User created and signed in immediately');
+          setMessage('Account created and signed in successfully!');
+        } else {
+          console.log('Unexpected signup result:', data);
+          setMessage('Account creation completed. Please try signing in.');
         }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -102,6 +103,7 @@ export default function AuthWrapper({ children, requireAuth = false }: AuthWrapp
   };
 
   const handleSignOut = async () => {
+    const supabase = createClient();
     await supabase.auth.signOut();
   };
 
