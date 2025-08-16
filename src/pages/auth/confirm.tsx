@@ -45,32 +45,29 @@ export default function AuthConfirmPage() {
             async (event, session) => {
               console.log('Auth state change:', event, session);
               
-              if (event === 'SIGNED_IN' && session) {
-                console.log('User signed in via PKCE flow:', session);
+              if (event === 'PASSWORD_RECOVERY' && session) {
+                console.log('Password recovery flow detected:', session);
                 setStatus('success');
-                
-                // Check what type of auth flow this was
-                const authFlowType = localStorage.getItem('auth-flow-type');
-                console.log('Auth flow type:', authFlowType);
-                
-                // Clear the auth flow type
-                localStorage.removeItem('auth-flow-type');
+                setMessage('Password reset confirmed! You can now set a new password.');
                 
                 // Unsubscribe from the listener
                 subscription.unsubscribe();
                 
-                if (authFlowType === 'password-reset') {
-                  setMessage('Password reset confirmed! You can now set a new password.');
-                  setTimeout(() => {
-                    router.push('/auth/update-password');
-                  }, 2000);
-                } else {
-                  setMessage('Authentication successful! Redirecting to your dashboard...');
-                  const redirectUrl = (next as string) || '/dashboard';
-                  setTimeout(() => {
-                    router.push(redirectUrl);
-                  }, 2000);
-                }
+                setTimeout(() => {
+                  router.push('/auth/update-password');
+                }, 2000);
+              } else if (event === 'SIGNED_IN' && session) {
+                console.log('User signed in via PKCE flow (magic link):', session);
+                setStatus('success');
+                setMessage('Authentication successful! Redirecting to your dashboard...');
+                
+                // Unsubscribe from the listener
+                subscription.unsubscribe();
+                
+                const redirectUrl = (next as string) || '/dashboard';
+                setTimeout(() => {
+                  router.push(redirectUrl);
+                }, 2000);
               } else if (event === 'SIGNED_OUT' || !session) {
                 console.log('Auth state change but no session');
               }
@@ -82,10 +79,12 @@ export default function AuthConfirmPage() {
           if (session) {
             console.log('Session already exists:', session);
             setStatus('success');
+            subscription.unsubscribe();
             
+            // For immediate sessions, we need to check if this was a password recovery
+            // by looking at localStorage as fallback (since PASSWORD_RECOVERY event may have already fired)
             const authFlowType = localStorage.getItem('auth-flow-type');
             localStorage.removeItem('auth-flow-type');
-            subscription.unsubscribe();
             
             if (authFlowType === 'password-reset') {
               setMessage('Password reset confirmed! You can now set a new password.');
