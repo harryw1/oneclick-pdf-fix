@@ -130,9 +130,9 @@ export default function HomePage() {
           processingId,
           options: {
             rotate: 0,
-            deskew: true,
+            deskew: false, // TODO: Implement deskewing
             compress: true,
-            ocr: true
+            ocr: false // TODO: Implement OCR
           }
         }),
       });
@@ -304,9 +304,9 @@ export default function HomePage() {
                       {result.pageCount} pages • {(result.fileSize / (1024 * 1024)).toFixed(1)} MB
                     </p>
                     <div className="flex space-x-2">
-                      <Badge variant="success">Rotated</Badge>
+                      <Badge variant="success">Processed</Badge>
                       <Badge variant="success">Compressed</Badge>
-                      <Badge variant="success">OCR Ready</Badge>
+                      <Badge variant="success">Optimized</Badge>
                     </div>
                   </div>
                   <Button asChild size="lg" className="shadow-lg">

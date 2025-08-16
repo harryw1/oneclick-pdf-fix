@@ -113,9 +113,21 @@ export default async function handler(
       });
     }
 
+    // TODO: Implement deskewing when options.deskew is true
+    // Note: This would require image processing of each page
+    if (options.deskew) {
+      console.log('Deskewing requested but not yet implemented');
+    }
+
+    // TODO: Implement OCR when options.ocr is true
+    // Note: This would require OCR text layer addition
+    if (options.ocr) {
+      console.log('OCR requested but not yet implemented');
+    }
+
     // Basic compression by optimizing the PDF structure
     const processedPdfBytes = await pdfDoc.save({
-      useObjectStreams: false,
+      useObjectStreams: options.compress !== false,
       addDefaultPage: false,
     });
 
