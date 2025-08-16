@@ -1,13 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['sharp', 'pdf-lib']
-  },
-  api: {
-    bodyParser: {
-      sizeLimit: '100mb',
-    },
-  },
+  serverExternalPackages: ['sharp', 'pdf-lib'],
 }
 
 module.exports = nextConfig
