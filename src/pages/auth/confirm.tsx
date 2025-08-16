@@ -18,10 +18,13 @@ export default function AuthConfirmPage() {
         const urlParams = new URLSearchParams(window.location.search);
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         
-        // Check both query params and router query
+        // Check for PKCE code parameter (modern Supabase auth flow)
+        let code = router.query.code || urlParams.get('code');
+        let next = router.query.next || urlParams.get('next');
+        
+        // Legacy parameters for backwards compatibility
         let token_hash = router.query.token_hash || urlParams.get('token_hash') || hashParams.get('access_token');
         let type = router.query.type || urlParams.get('type') || hashParams.get('type');
-        let next = router.query.next || urlParams.get('next');
         
         // Log everything for debugging
         console.log('=== Auth Callback Debug ===');
@@ -29,12 +32,47 @@ export default function AuthConfirmPage() {
         console.log('Router query:', router.query);
         console.log('URL search params:', Object.fromEntries(urlParams.entries()));
         console.log('Hash params:', Object.fromEntries(hashParams.entries()));
-        console.log('Extracted params:', { token_hash, type, next });
+        console.log('Extracted params:', { code, token_hash, type, next });
         
         const supabase = createClient();
         
-        // If we have an access_token in the hash, this is likely from a magic link
-        // Let's try to get the session directly
+        // PKCE flow - exchange code for session (modern approach)
+        if (code) {
+          console.log('Detected PKCE code, exchanging for session...');
+          
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code as string);
+          
+          if (error) {
+            console.error('Code exchange error:', error);
+            throw error;
+          }
+          
+          console.log('Code exchange successful:', data);
+          setStatus('success');
+          
+          // Check what type of auth flow this was
+          const authFlowType = localStorage.getItem('auth-flow-type');
+          console.log('Auth flow type:', authFlowType);
+          
+          // Clear the auth flow type
+          localStorage.removeItem('auth-flow-type');
+          
+          if (authFlowType === 'password-reset') {
+            setMessage('Password reset confirmed! You can now set a new password.');
+            setTimeout(() => {
+              router.push('/auth/update-password');
+            }, 2000);
+          } else {
+            setMessage('Authentication successful! Redirecting to your dashboard...');
+            const redirectUrl = (next as string) || '/dashboard';
+            setTimeout(() => {
+              router.push(redirectUrl);
+            }, 2000);
+          }
+          return;
+        }
+        
+        // Legacy approach: Direct tokens in hash
         if (hashParams.get('access_token') && hashParams.get('refresh_token')) {
           console.log('Detected tokens in hash, setting session...');
           
@@ -58,43 +96,44 @@ export default function AuthConfirmPage() {
           return;
         }
         
-        // Otherwise, try the OTP verification approach
-        if (!token_hash || !type) {
-          setStatus('error');
-          setMessage('Invalid confirmation link. Please request a new one.');
+        // Legacy approach: OTP verification
+        if (token_hash && type) {
+          console.log('Attempting legacy OTP verification...');
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash: token_hash as string,
+            type: type as any
+          });
+          
+          if (error) {
+            console.error('OTP verification error:', error);
+            throw error;
+          }
+          
+          console.log('OTP verification success:', data);
+          
+          // Handle success based on type
+          switch (type) {
+            case 'recovery':
+              setStatus('success');
+              setMessage('Password reset confirmed! You can now set a new password.');
+              setTimeout(() => {
+                router.push('/auth/update-password');
+              }, 2000);
+              break;
+            default:
+              setStatus('success');
+              setMessage('Authentication successful! Redirecting to your dashboard...');
+              const redirectUrl = (next as string) || '/dashboard';
+              setTimeout(() => {
+                router.push(redirectUrl);
+              }, 2000);
+          }
           return;
         }
-
-        console.log('Attempting OTP verification...');
-        const { data, error } = await supabase.auth.verifyOtp({
-          token_hash: token_hash as string,
-          type: type as any
-        });
         
-        if (error) {
-          console.error('OTP verification error:', error);
-          throw error;
-        }
-        
-        console.log('OTP verification success:', data);
-        
-        // Handle success based on type
-        switch (type) {
-          case 'recovery':
-            setStatus('success');
-            setMessage('Password reset confirmed! You can now set a new password.');
-            setTimeout(() => {
-              router.push('/auth/update-password');
-            }, 2000);
-            break;
-          default:
-            setStatus('success');
-            setMessage('Authentication successful! Redirecting to your dashboard...');
-            const redirectUrl = (next as string) || '/dashboard';
-            setTimeout(() => {
-              router.push(redirectUrl);
-            }, 2000);
-        }
+        // No valid auth parameters found
+        setStatus('error');
+        setMessage('Invalid confirmation link. Please request a new one.');
         
       } catch (error: any) {
         console.error('Auth callback error:', error);

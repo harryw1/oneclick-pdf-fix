@@ -27,6 +27,7 @@ export default function HomePage() {
       
       // Check for auth callback parameters
       const hasAuthParams = 
+        urlParams.get('code') ||           // PKCE flow
         urlParams.get('token_hash') || 
         urlParams.get('type') || 
         hashParams.get('access_token') || 

@@ -88,6 +88,9 @@ export default function AuthPage() {
     try {
       const supabase = createClient();
       
+      // Mark this as a password reset flow
+      localStorage.setItem('auth-flow-type', 'password-reset');
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: getAuthRedirectUrl('/auth/confirm'),
       });
@@ -113,6 +116,9 @@ export default function AuthPage() {
     
     try {
       const supabase = createClient();
+      
+      // Mark this as a magic link flow
+      localStorage.setItem('auth-flow-type', 'magic-link');
       
       const { error } = await supabase.auth.signInWithOtp({
         email,
