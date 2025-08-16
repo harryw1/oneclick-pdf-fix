@@ -8,7 +8,7 @@ import type { ProcessingStatus } from '@/types/pdf';
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
   processing: boolean;
-  status?: ProcessingStatus;
+  status?: ProcessingStatus | null;
 }
 
 export default function FileUpload({ onFileSelect, processing, status }: FileUploadProps) {
