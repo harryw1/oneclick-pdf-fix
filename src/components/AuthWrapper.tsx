@@ -49,7 +49,6 @@ export default function AuthWrapper({ children, requireAuth = false }: AuthWrapp
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.id);
         setUser(session?.user ?? null);
         setLoading(false);
         

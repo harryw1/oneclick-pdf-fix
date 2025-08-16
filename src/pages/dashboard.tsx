@@ -34,7 +34,6 @@ export default function DashboardPage() {
 
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        console.log('Dashboard session check:', { session: !!session, user: session?.user?.id, error });
         
         if (session?.user) {
           setAuthToken(session.access_token);
@@ -45,8 +44,6 @@ export default function DashboardPage() {
             .eq('id', session.user.id)
             .single();
             
-          console.log('Profile fetch:', { profile, profileError });
-            
           if (profile) {
             setProfile({
               id: session.user.id,
@@ -55,9 +52,9 @@ export default function DashboardPage() {
               usage_this_week: profile.usage_this_week || 0,
               total_pages_processed: profile.total_pages_processed || 0
             });
+          } else {
+            console.error('Profile not found:', profileError);
           }
-        } else {
-          console.log('No session found in dashboard');
         }
       } catch (error) {
         console.error('Dashboard auth error:', error);
@@ -70,9 +67,28 @@ export default function DashboardPage() {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Dashboard auth state change:', event, !!session);
       if (event === 'SIGNED_IN' && session) {
-        window.location.reload(); // Reload to get fresh profile data
+        // Refresh profile data instead of reloading page
+        setAuthToken(session.access_token);
+        
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (profile) {
+          setProfile({
+            id: session.user.id,
+            email: session.user.email!,
+            plan: profile.plan || 'free',
+            usage_this_week: profile.usage_this_week || 0,
+            total_pages_processed: profile.total_pages_processed || 0
+          });
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setProfile(null);
+        setAuthToken(null);
       }
     });
 
