@@ -1,39 +1,72 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import stripe, { createCheckoutSession } from '@/utils/stripe';
-import { getCurrentUser } from '@/utils/auth';
+import stripe, { createCheckoutSession, createCustomerPortalSession } from '@/utils/stripe';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'placeholder',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
+);
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // Get current user from auth token
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  
+  if (authError || !user) {
+    return res.status(401).json({ error: 'Invalid authentication' });
+  }
+
+  // Get user profile
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError || !profile) {
+    return res.status(404).json({ error: 'User profile not found' });
+  }
+
   if (req.method === 'POST') {
     try {
-      const user = await getCurrentUser();
-      
-      if (!user) {
-        return res.status(401).json({ error: 'Not authenticated' });
-      }
+      const { action } = req.body;
 
-      const session = await createCheckoutSession(user.id, user.email);
-      
-      res.status(200).json({ sessionId: session.id, url: session.url });
+      if (action === 'create_checkout') {
+        // Create Stripe checkout session
+        const session = await createCheckoutSession(user.id, user.email!);
+        res.status(200).json({ sessionId: session.id, url: session.url });
+      } else if (action === 'create_portal') {
+        // Create customer portal session
+        if (!profile.stripe_customer_id) {
+          return res.status(400).json({ error: 'No active subscription found' });
+        }
+        
+        const session = await createCustomerPortalSession(profile.stripe_customer_id);
+        res.status(200).json({ url: session.url });
+      } else {
+        res.status(400).json({ error: 'Invalid action' });
+      }
     } catch (error) {
       console.error('Stripe error:', error);
-      res.status(500).json({ error: 'Failed to create checkout session' });
+      res.status(500).json({ error: 'Failed to process request' });
     }
   } else if (req.method === 'GET') {
     // Get subscription status
     try {
-      const user = await getCurrentUser();
-      
-      if (!user) {
-        return res.status(401).json({ error: 'Not authenticated' });
-      }
-
-      // TODO: Fetch subscription from database
       res.status(200).json({ 
-        plan: user.plan,
-        usage_this_week: user.usage_this_week
+        plan: profile.plan,
+        usage_this_week: profile.usage_this_week,
+        total_pages_processed: profile.total_pages_processed,
+        stripe_customer_id: profile.stripe_customer_id,
+        stripe_subscription_id: profile.stripe_subscription_id
       });
     } catch (error) {
       console.error('Subscription status error:', error);

@@ -4,8 +4,88 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, Zap, Sparkles, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import { GetServerSideProps } from 'next';
 
 export default function PricingPage() {
+  const [user, setUser] = useState<any>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'placeholder',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
+  );
+
+  useEffect(() => {
+    const getSession = async () => {
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setUser(session.user);
+        setAuthToken(session.access_token);
+      }
+    };
+
+    getSession();
+
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
+      return;
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session) {
+          setUser(session.user);
+          setAuthToken(session.access_token);
+        } else {
+          setUser(null);
+          setAuthToken(null);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
+
+  const handleUpgrade = async () => {
+    if (!user || !authToken) {
+      // Redirect to sign in
+      window.location.href = '/dashboard';
+      return;
+    }
+
+    setLoading(true);
+    
+    try {
+      const response = await fetch('/api/subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ action: 'create_checkout' })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Failed to start checkout process');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to start checkout process');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const plans = [
     {
       name: 'Free',
@@ -116,13 +196,15 @@ export default function PricingPage() {
                   </ul>
                   
                   <Button 
+                    onClick={plan.popular ? handleUpgrade : () => window.location.href = '/dashboard'}
+                    disabled={loading}
                     className={cn(
                       "w-full h-12 text-base font-semibold transition-all duration-200",
                       plan.popular && "bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 shadow-lg hover:shadow-xl"
                     )}
                     variant={plan.popular ? "default" : "outline"}
                   >
-                    {plan.cta}
+                    {loading && plan.popular ? 'Loading...' : plan.cta}
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </CardContent>
@@ -158,3 +240,10 @@ export default function PricingPage() {
     </>
   );
 }
+
+// Force client-side rendering to avoid build issues with Supabase
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    props: {}
+  };
+};

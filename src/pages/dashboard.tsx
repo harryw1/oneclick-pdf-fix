@@ -16,6 +16,7 @@ interface UserProfile {
 export default function DashboardPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authToken, setAuthToken] = useState<string | null>(null);
   
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || 'placeholder',
@@ -30,19 +31,21 @@ export default function DashboardPage() {
         return;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (user) {
+      if (session?.user) {
+        setAuthToken(session.access_token);
+        
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('id', session.user.id)
           .single();
           
         if (profile) {
           setProfile({
-            id: user.id,
-            email: user.email!,
+            id: session.user.id,
+            email: session.user.email!,
             plan: profile.plan || 'free',
             usage_this_week: profile.usage_this_week || 0,
             total_pages_processed: profile.total_pages_processed || 0
@@ -58,6 +61,32 @@ export default function DashboardPage() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     window.location.href = '/';
+  };
+
+  const handleManageSubscription = async () => {
+    if (!authToken) return;
+
+    try {
+      const response = await fetch('/api/subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ action: 'create_portal' })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Failed to open subscription management');
+      }
+    } catch (error) {
+      console.error('Portal error:', error);
+      alert('Failed to open subscription management');
+    }
   };
 
   if (loading) {
@@ -86,7 +115,13 @@ export default function DashboardPage() {
               <a href="/" className="text-2xl font-bold text-gray-900">OneClick PDF Fixer</a>
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-gray-600">Welcome, {profile?.email}</span>
-                <a href="/pricing" className="btn-secondary">Pricing</a>
+                {profile?.plan === 'free' ? (
+                  <a href="/pricing" className="btn-primary">Upgrade to Pro</a>
+                ) : (
+                  <button onClick={handleManageSubscription} className="btn-secondary">
+                    Manage Subscription
+                  </button>
+                )}
                 <button onClick={handleSignOut} className="btn-primary">Sign Out</button>
               </div>
             </div>

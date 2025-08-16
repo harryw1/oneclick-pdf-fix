@@ -16,7 +16,7 @@ export const PLANS = {
   pro: {
     name: 'Pro',
     price: 4,
-    priceId: 'price_pro_monthly', // Replace with actual Stripe price ID
+    priceId: 'price_1RwlaQRVxTjhJx7K34kVkPf6',
     pages_per_week: Infinity,
     features: [
       'Unlimited pages',
@@ -39,11 +39,12 @@ export async function createCheckoutSession(userId: string, email: string) {
       },
     ],
     mode: 'subscription',
-    success_url: `${process.env.NEXTAUTH_URL}/dashboard?success=true`,
-    cancel_url: `${process.env.NEXTAUTH_URL}/pricing?canceled=true`,
+    success_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard?success=true`,
+    cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/pricing?canceled=true`,
     metadata: {
       userId,
     },
+    allow_promotion_codes: true,
   });
 
   return session;
@@ -52,8 +53,18 @@ export async function createCheckoutSession(userId: string, email: string) {
 export async function createCustomerPortalSession(customerId: string) {
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
-    return_url: `${process.env.NEXTAUTH_URL}/dashboard`,
+    return_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard`,
   });
 
   return session;
+}
+
+export async function getSubscriptionStatus(customerId: string) {
+  const subscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'active',
+    limit: 1,
+  });
+
+  return subscriptions.data[0] || null;
 }
