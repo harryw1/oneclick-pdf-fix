@@ -44,7 +44,7 @@ export default function PricingPage() {
   const handleUpgrade = async () => {
     if (!user || !authToken) {
       // Redirect to sign in
-      window.location.href = '/dashboard';
+      window.location.href = '/auth';
       return;
     }
 
@@ -185,7 +185,7 @@ export default function PricingPage() {
                   </ul>
                   
                   <Button 
-                    onClick={plan.popular ? handleUpgrade : () => window.location.href = '/dashboard'}
+                    onClick={plan.popular ? handleUpgrade : () => window.location.href = user ? '/dashboard' : '/auth'}
                     disabled={loading}
                     className={cn(
                       "w-full h-12 text-base font-semibold transition-all duration-200",

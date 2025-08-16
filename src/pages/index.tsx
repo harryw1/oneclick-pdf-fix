@@ -187,7 +187,7 @@ export default function HomePage() {
                   </Button>
                 ) : (
                   <Button asChild>
-                    <a href="/dashboard">Sign In</a>
+                    <a href="/auth">Sign In</a>
                   </Button>
                 )}
               </div>
@@ -245,7 +245,7 @@ export default function HomePage() {
                     Create a free account to process up to 10 pages per week
                   </p>
                   <Button asChild size="lg">
-                    <a href="/dashboard">Sign In / Sign Up</a>
+                    <a href="/auth">Sign In / Sign Up</a>
                   </Button>
                 </CardContent>
               </Card>
