@@ -16,6 +16,9 @@ export default function AuthConfirmPage() {
       try {
         const { token_hash, type, next } = router.query;
         
+        // Log the received parameters for debugging
+        console.log('Auth callback params:', { token_hash, type, next, allQuery: router.query });
+        
         if (!token_hash || !type) {
           setStatus('error');
           setMessage('Invalid confirmation link. Please request a new one.');
@@ -24,29 +27,36 @@ export default function AuthConfirmPage() {
 
         const supabase = createClient();
         
-        // Handle different auth callback types
-        switch (type) {
-          case 'email':
-            await handleEmailConfirmation(supabase, token_hash as string);
-            break;
-          case 'recovery':
-            await handlePasswordReset(supabase, token_hash as string);
-            break;
-          case 'signup':
-            await handleSignupConfirmation(supabase, token_hash as string);
-            break;
-          case 'magiclink':
-            await handleMagicLink(supabase, token_hash as string);
-            break;
-          default:
-            throw new Error(`Unknown auth type: ${type}`);
+        // Use verifyOtp for all types - Supabase handles the type internally
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash: token_hash as string,
+          type: type as any
+        });
+        
+        if (error) {
+          console.error('OTP verification error:', error);
+          throw error;
         }
         
-        // Redirect to intended destination or dashboard
-        const redirectUrl = (next as string) || '/dashboard';
-        setTimeout(() => {
-          router.push(redirectUrl);
-        }, 2000);
+        console.log('OTP verification success:', data);
+        
+        // Handle success based on type
+        switch (type) {
+          case 'recovery':
+            setStatus('success');
+            setMessage('Password reset confirmed! You can now set a new password.');
+            setTimeout(() => {
+              router.push('/auth/update-password');
+            }, 2000);
+            break;
+          default:
+            setStatus('success');
+            setMessage('Authentication successful! Redirecting to your dashboard...');
+            const redirectUrl = (next as string) || '/dashboard';
+            setTimeout(() => {
+              router.push(redirectUrl);
+            }, 2000);
+        }
         
       } catch (error: any) {
         console.error('Auth callback error:', error);
@@ -61,58 +71,6 @@ export default function AuthConfirmPage() {
     }
   }, [router.isReady, router.query]);
 
-  const handleEmailConfirmation = async (supabase: any, tokenHash: string) => {
-    const { data, error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: 'email'
-    });
-    
-    if (error) throw error;
-    
-    setStatus('success');
-    setMessage('Email confirmed successfully! Redirecting to your dashboard...');
-  };
-
-  const handlePasswordReset = async (supabase: any, tokenHash: string) => {
-    const { data, error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: 'recovery'
-    });
-    
-    if (error) throw error;
-    
-    setStatus('success');
-    setMessage('Password reset confirmed! You can now set a new password.');
-    
-    // Redirect to password update page after a brief delay
-    setTimeout(() => {
-      router.push('/auth/update-password');
-    }, 2000);
-  };
-
-  const handleSignupConfirmation = async (supabase: any, tokenHash: string) => {
-    const { data, error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: 'signup'
-    });
-    
-    if (error) throw error;
-    
-    setStatus('success');
-    setMessage('Account confirmed successfully! Redirecting to your dashboard...');
-  };
-
-  const handleMagicLink = async (supabase: any, tokenHash: string) => {
-    const { data, error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: 'magiclink'
-    });
-    
-    if (error) throw error;
-    
-    setStatus('success');
-    setMessage('Magic link confirmed! Redirecting to your dashboard...');
-  };
 
   const getIcon = () => {
     switch (status) {

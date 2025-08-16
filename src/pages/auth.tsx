@@ -88,7 +88,7 @@ export default function AuthPage() {
       const supabase = createClient();
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/confirm?type=recovery`,
+        redirectTo: `${window.location.origin}/auth/confirm`,
       });
       
       if (error) throw error;
@@ -116,7 +116,7 @@ export default function AuthPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/confirm?type=magiclink`,
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
         },
       });
       
@@ -145,7 +145,7 @@ export default function AuthPage() {
         type: 'signup',
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/confirm?type=email`,
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
         },
       });
       

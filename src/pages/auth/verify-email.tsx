@@ -51,7 +51,7 @@ export default function VerifyEmailPage() {
         type: 'signup',
         email: user.email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/confirm?type=email`,
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
         },
       });
       
