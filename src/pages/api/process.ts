@@ -129,12 +129,12 @@ export default async function handler(
     // Check usage limits for free users
     if (profile.plan === 'free') {
       const newUsage = profile.usage_this_week + pageCount;
-      if (newUsage > 10) {
+      if (newUsage > 3) {
         return res.status(403).json({ 
           error: 'Weekly page limit exceeded', 
-          message: `You've reached your free tier limit of 10 pages per week. Upgrade to Pro for unlimited processing.`,
+          message: `You've reached your free tier limit of 3 pages per week. Upgrade to Pro for unlimited processing.`,
           currentUsage: profile.usage_this_week,
-          pageLimit: 10,
+          pageLimit: 3,
           requestedPages: pageCount
         });
       }
@@ -163,20 +163,8 @@ export default async function handler(
     // Implement basic OCR functionality
     if (options.ocr) {
       console.log('Processing OCR...');
-      // This is a basic implementation - in production you'd want to:
-      // 1. Convert PDF pages to images
-      // 2. Run OCR on each image
-      // 3. Add invisible text layer to PDF
-      // For now, we'll just add a basic text layer indicator
-      const firstPage = pages[0];
-      if (firstPage) {
-        firstPage.drawText('OCR processed by OneClick PDF Fixer', {
-          x: 50,
-          y: firstPage.getHeight() - 50,
-          size: 8,
-          color: rgb(0.8, 0.8, 0.8),
-        });
-      }
+      // OCR processing without watermark - keep the service professional
+      // TODO: Implement actual OCR text layer extraction and embedding
     }
 
     // Basic compression by optimizing the PDF structure

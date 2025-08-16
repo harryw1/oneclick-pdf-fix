@@ -105,6 +105,9 @@ export default function HomePage() {
       
       const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        },
         body: formData,
         signal: uploadController.signal,
       });
@@ -312,7 +315,7 @@ export default function HomePage() {
                 <CardContent className="p-8 text-center">
                   <h3 className="text-xl font-bold mb-4">Ready to fix your PDFs?</h3>
                   <p className="text-gray-600 mb-6">
-                    Create a free account and start fixing up to 10 pages per week — no credit card required!
+                    Create a free account and start fixing up to 3 pages per week — no credit card required!
                   </p>
                   <Button asChild size="lg">
                     <a href="/auth">Get Started Free</a>
@@ -359,7 +362,7 @@ export default function HomePage() {
             <Card className="inline-block bg-gradient-to-r from-primary-500 to-primary-600 text-white border-0">
               <CardContent className="p-6">
                 <p className="font-medium">
-                  Free: 10 pages weekly • 
+                  Free: 3 pages weekly • 
                   <Button variant="link" asChild className="text-white hover:text-primary-100 p-0 ml-2 font-semibold">
                     <a href="/pricing" className="inline-flex items-center">
                       Upgrade for unlimited processing

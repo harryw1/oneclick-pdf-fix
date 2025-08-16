@@ -35,7 +35,7 @@ export default function FileUpload({ onFileSelect, processing, status }: FileUpl
       'application/pdf': ['.pdf']
     },
     maxFiles: 1,
-    maxSize: 100 * 1024 * 1024, // 100MB
+    maxSize: 10 * 1024 * 1024, // 10MB for free tier
     disabled: processing
   });
 
@@ -67,7 +67,7 @@ export default function FileUpload({ onFileSelect, processing, status }: FileUpl
                   {isDragActive ? '✨ Drop your PDF here' : 'Drag and drop your PDF'}
                 </p>
                 <p className="text-sm sm:text-base text-gray-600">
-                  or tap to browse • Max 100MB
+                  or tap to browse • Max 10MB (Free) / 100MB (Pro)
                 </p>
                 <div className="inline-block bg-gray-100 text-gray-700 text-xs sm:text-sm font-medium px-3 py-1 rounded-full">
                   PDF files only

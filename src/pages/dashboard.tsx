@@ -124,7 +124,7 @@ export default function DashboardPage({ user, profile: initialProfile }: Dashboa
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-500">Pages This Week</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {profile?.usage_this_week || 0} / {profile?.plan === 'pro' ? '∞' : '10'}
+                      {profile?.usage_this_week || 0} / {profile?.plan === 'pro' ? '∞' : '3'}
                     </p>
                   </div>
                 </div>
