@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import FileUpload from '@/components/FileUpload';
 import { Button } from '@/components/ui/button';
@@ -8,14 +8,65 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Download, Zap, Shield, Clock, Star, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { createClient } from '@supabase/supabase-js';
 import type { ProcessingStatus } from '@/types/pdf';
+import { GetServerSideProps } from 'next';
 
 export default function HomePage() {
   const [processing, setProcessing] = useState(false);
   const [status, setStatus] = useState<ProcessingStatus | null>(null);
   const [result, setResult] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'placeholder',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
+  );
+
+  useEffect(() => {
+    const getSession = async () => {
+      // Skip if environment variables aren't set (during build)
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setUser(session.user);
+        setAuthToken(session.access_token);
+      }
+    };
+
+    getSession();
+
+    // Skip auth state change listener during build
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
+      return;
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session) {
+          setUser(session.user);
+          setAuthToken(session.access_token);
+        } else {
+          setUser(null);
+          setAuthToken(null);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
   const handleFileSelect = async (file: File) => {
+    // Check if user is authenticated
+    if (!user || !authToken) {
+      alert('Please sign in to process PDFs');
+      return;
+    }
+
     setProcessing(true);
     setStatus({
       id: 'temp',
@@ -50,7 +101,10 @@ export default function HomePage() {
       // Process PDF
       const processResponse = await fetch('/api/process', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
         body: JSON.stringify({
           processingId,
           options: {
@@ -140,9 +194,15 @@ export default function HomePage() {
                 <Button variant="ghost" asChild>
                   <a href="/pricing">Pricing</a>
                 </Button>
-                <Button asChild>
-                  <a href="/dashboard">Dashboard</a>
-                </Button>
+                {user ? (
+                  <Button asChild>
+                    <a href="/dashboard">Dashboard</a>
+                  </Button>
+                ) : (
+                  <Button asChild>
+                    <a href="/dashboard">Sign In</a>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -184,11 +244,25 @@ export default function HomePage() {
 
           {/* Upload Area */}
           <div className="mb-16">
-            <FileUpload
-              onFileSelect={handleFileSelect}
-              processing={processing}
-              status={status}
-            />
+            {user ? (
+              <FileUpload
+                onFileSelect={handleFileSelect}
+                processing={processing}
+                status={status}
+              />
+            ) : (
+              <Card className="max-w-2xl mx-auto">
+                <CardContent className="p-8 text-center">
+                  <h3 className="text-xl font-bold mb-4">Sign in to get started</h3>
+                  <p className="text-gray-600 mb-6">
+                    Create a free account to process up to 10 pages per week
+                  </p>
+                  <Button asChild size="lg">
+                    <a href="/dashboard">Sign In / Sign Up</a>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Download Result */}
@@ -244,3 +318,10 @@ export default function HomePage() {
     </>
   );
 }
+
+// Force client-side rendering to avoid build issues with Supabase
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    props: {}
+  };
+};

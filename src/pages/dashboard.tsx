@@ -1,22 +1,93 @@
 import Head from 'next/head';
 import { FileText, Calendar, Download } from 'lucide-react';
+import AuthWrapper from '@/components/AuthWrapper';
+import { useEffect, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
+import { GetServerSideProps } from 'next';
+
+interface UserProfile {
+  id: string;
+  email: string;
+  plan: 'free' | 'pro';
+  usage_this_week: number;
+  total_pages_processed: number;
+}
 
 export default function DashboardPage() {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'placeholder',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
+  );
+
+  useEffect(() => {
+    const getProfile = async () => {
+      // Skip if environment variables aren't set (during build)
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
+        setLoading(false);
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+          
+        if (profile) {
+          setProfile({
+            id: user.id,
+            email: user.email!,
+            plan: profile.plan || 'free',
+            usage_this_week: profile.usage_this_week || 0,
+            total_pages_processed: profile.total_pages_processed || 0
+          });
+        }
+      }
+      setLoading(false);
+    };
+
+    getProfile();
+  }, [supabase]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  };
+
+  if (loading) {
+    return (
+      <AuthWrapper requireAuth={true}>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </AuthWrapper>
+    );
+  }
   return (
-    <>
+    <AuthWrapper requireAuth={true}>
       <Head>
         <title>Dashboard - OneClick PDF Fixer</title>
         <meta name="description" content="Manage your PDF processing history and account" />
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-100/50">
         <header className="bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center">
               <a href="/" className="text-2xl font-bold text-gray-900">OneClick PDF Fixer</a>
-              <div className="flex space-x-4">
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-600">Welcome, {profile?.email}</span>
                 <a href="/pricing" className="btn-secondary">Pricing</a>
-                <button className="btn-primary">Sign Out</button>
+                <button onClick={handleSignOut} className="btn-primary">Sign Out</button>
               </div>
             </div>
           </div>
@@ -35,7 +106,9 @@ export default function DashboardPage() {
                 <FileText className="h-8 w-8 text-primary-500" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Pages This Week</p>
-                  <p className="text-2xl font-bold text-gray-900">3 / 10</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {profile?.usage_this_week || 0} / {profile?.plan === 'pro' ? '∞' : '10'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -45,7 +118,7 @@ export default function DashboardPage() {
                 <Calendar className="h-8 w-8 text-green-500" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Plan</p>
-                  <p className="text-2xl font-bold text-gray-900">Free</p>
+                  <p className="text-2xl font-bold text-gray-900 capitalize">{profile?.plan || 'Free'}</p>
                 </div>
               </div>
             </div>
@@ -55,7 +128,7 @@ export default function DashboardPage() {
                 <Download className="h-8 w-8 text-blue-500" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500">Total Processed</p>
-                  <p className="text-2xl font-bold text-gray-900">12</p>
+                  <p className="text-2xl font-bold text-gray-900">{profile?.total_pages_processed || 0}</p>
                 </div>
               </div>
             </div>
@@ -79,6 +152,13 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </>
+    </AuthWrapper>
   );
 }
+
+// Force client-side rendering to avoid build issues with Supabase
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    props: {}
+  };
+};
