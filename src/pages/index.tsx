@@ -178,7 +178,7 @@ export default function HomePage() {
           
           // Handle non-JSON responses (like 413 errors)
           if (uploadResponse.status === 413) {
-            throw new Error('File too large. Free tier supports files up to 15MB (debugging).');
+            throw new Error('File too large. Free tier supports files up to 10MB.');
           }
           throw new Error(`Upload failed with status ${uploadResponse.status}`);
         }
