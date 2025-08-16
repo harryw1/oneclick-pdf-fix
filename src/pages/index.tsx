@@ -18,6 +18,7 @@ export default function HomePage() {
   const [result, setResult] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<'free' | 'pro'>('free');
 
   useEffect(() => {
     // Check if this is an auth callback that should go to /auth/confirm
@@ -55,6 +56,15 @@ export default function HomePage() {
       if (session) {
         setUser(session.user);
         setAuthToken(session.access_token);
+        
+        // Get user profile to determine plan
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('plan')
+          .eq('id', session.user.id)
+          .single();
+        
+        setUserPlan(profile?.plan || 'free');
       }
     };
 
@@ -65,9 +75,19 @@ export default function HomePage() {
         if (session) {
           setUser(session.user);
           setAuthToken(session.access_token);
+          
+          // Get user profile for plan
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('plan')
+            .eq('id', session.user.id)
+            .single();
+          
+          setUserPlan(profile?.plan || 'free');
         } else {
           setUser(null);
           setAuthToken(null);
+          setUserPlan('free');
         }
       }
     );
@@ -318,6 +338,7 @@ export default function HomePage() {
                 onFileSelect={handleFileSelect}
                 processing={processing}
                 status={status}
+                userPlan={userPlan}
               />
             ) : (
               <Card className="max-w-2xl mx-auto">

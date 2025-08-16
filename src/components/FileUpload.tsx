@@ -16,9 +16,10 @@ interface FileUploadProps {
   onFileSelect: (file: File) => void;
   processing: boolean;
   status?: ProcessingStatus | null;
+  userPlan?: 'free' | 'pro';
 }
 
-export default function FileUpload({ onFileSelect, processing, status }: FileUploadProps) {
+export default function FileUpload({ onFileSelect, processing, status, userPlan = 'free' }: FileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -29,13 +30,15 @@ export default function FileUpload({ onFileSelect, processing, status }: FileUpl
     }
   }, [onFileSelect]);
 
+  const maxFileSize = userPlan === 'pro' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+
   const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     onDrop,
     accept: {
       'application/pdf': ['.pdf']
     },
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024, // 10MB for free tier
+    maxSize: maxFileSize,
     disabled: processing
   });
 
@@ -67,7 +70,7 @@ export default function FileUpload({ onFileSelect, processing, status }: FileUpl
                   {isDragActive ? '✨ Drop your PDF here' : 'Drag and drop your PDF'}
                 </p>
                 <p className="text-sm sm:text-base text-gray-600">
-                  or tap to browse • Max 10MB (Free) / 100MB (Pro)
+                  or tap to browse • Max {userPlan === 'pro' ? '100MB' : '10MB'}
                 </p>
                 <div className="inline-block bg-gray-100 text-gray-700 text-xs sm:text-sm font-medium px-3 py-1 rounded-full">
                   PDF files only

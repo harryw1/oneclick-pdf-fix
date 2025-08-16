@@ -49,15 +49,20 @@ export default async function handler(
     },
   });
 
-  const { data: profile } = await userSupabase
+  const { data: profile, error: profileError } = await userSupabase
     .from('profiles')
     .select('plan')
     .eq('id', user.id)
     .single();
 
+  console.log('User profile:', profile, 'Error:', profileError);
+
   try {
-    // Set maxFileSize based on user tier
-    const maxFileSize = profile?.plan === 'pro' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    // Set maxFileSize based on user tier - default to free if profile not found
+    const userPlan = profile?.plan || 'free';
+    const maxFileSize = userPlan === 'pro' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    
+    console.log('User plan:', userPlan, 'Max file size:', maxFileSize);
     
     const form = formidable({
       uploadDir: '/tmp',
@@ -71,12 +76,17 @@ export default async function handler(
       [fields, files] = await form.parse(req);
     } catch (formError: any) {
       console.error('Formidable parsing error:', formError);
-      if (formError.code === 'LIMIT_FILE_SIZE' || formError.message?.includes('maxFileSize')) {
+      console.error('Error code:', formError.code);
+      console.error('Error message:', formError.message);
+      
+      if (formError.code === 'LIMIT_FILE_SIZE' || 
+          formError.message?.includes('maxFileSize') || 
+          formError.message?.includes('too large')) {
         return res.status(413).json({ 
           error: 'File too large',
-          message: profile?.plan === 'pro' 
-            ? 'Maximum file size is 100MB' 
-            : 'Free tier maximum file size is 10MB. Upgrade to Pro for 100MB files.'
+          message: `File size exceeds ${userPlan === 'pro' ? '100MB' : '10MB'} limit. ${userPlan === 'free' ? 'Upgrade to Pro for 100MB files.' : ''}`,
+          userPlan,
+          maxFileSize
         });
       }
       throw formError;
