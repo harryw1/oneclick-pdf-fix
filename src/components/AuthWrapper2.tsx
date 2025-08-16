@@ -20,9 +20,8 @@ export default function AuthWrapper2({ children, requireAuth = false }: AuthWrap
   const [message, setMessage] = useState<string>('')
   const [isTransitioning, setIsTransitioning] = useState(false)
   
-  const supabase = createClient()
-
   useEffect(() => {
+    const supabase = createClient()
     const getUser = async () => {
       try {
         const { data: { user }, error } = await supabase.auth.getUser()
@@ -52,13 +51,15 @@ export default function AuthWrapper2({ children, requireAuth = false }: AuthWrap
     )
 
     return () => subscription.unsubscribe()
-  }, [supabase])
+  }, [])
 
   const handleAuth = async (email: string, password: string) => {
     setAuthLoading(true)
     setMessage('')
     
     try {
+      const supabase = createClient()
+      
       if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -93,6 +94,7 @@ export default function AuthWrapper2({ children, requireAuth = false }: AuthWrap
   }
 
   const handleSignOut = async () => {
+    const supabase = createClient()
     await supabase.auth.signOut()
   }
 

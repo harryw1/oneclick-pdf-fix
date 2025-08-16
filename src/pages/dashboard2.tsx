@@ -17,10 +17,9 @@ export default function Dashboard2Page() {
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [authToken, setAuthToken] = useState<string | null>(null)
-  
-  const supabase = createClient()
 
   useEffect(() => {
+    const supabase = createClient()
     const getProfile = async () => {
       try {
         const { data: { user }, error } = await supabase.auth.getUser()
@@ -82,7 +81,7 @@ export default function Dashboard2Page() {
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase])
+  }, [])
 
   const handleManageSubscription = async () => {
     if (!authToken) return
