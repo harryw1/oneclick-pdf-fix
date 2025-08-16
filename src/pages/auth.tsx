@@ -31,8 +31,8 @@ export default function AuthPage() {
         if (error) throw error;
         
         if (data.user && !data.session) {
-          setMessage('Account created! Please check your email to confirm your account.');
-          setMessageType('success');
+          // User created but email not confirmed - redirect to verification page
+          router.push('/auth/verify-email');
         } else if (data.session) {
           setMessage('Account created successfully!');
           setMessageType('success');
@@ -52,7 +52,27 @@ export default function AuthPage() {
       }
     } catch (error: any) {
       console.error('Auth error:', error);
-      setMessage(error.message || 'Authentication failed');
+      
+      // Handle specific error types
+      let errorMessage = error.message || 'Authentication failed';
+      
+      if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+      } else if (error.message?.includes('Email not confirmed')) {
+        errorMessage = 'Please verify your email address before signing in.';
+        // If we have the email, redirect to verification page
+        setTimeout(() => {
+          router.push('/auth/verify-email');
+        }, 2000);
+      } else if (error.message?.includes('Too many requests')) {
+        errorMessage = 'Too many login attempts. Please wait a few minutes before trying again.';
+      } else if (error.message?.includes('User already registered')) {
+        errorMessage = 'An account with this email already exists. Try signing in instead.';
+      } else if (error.message?.includes('Password should be at least')) {
+        errorMessage = 'Password must be at least 6 characters long.';
+      }
+      
+      setMessage(errorMessage);
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -107,6 +127,35 @@ export default function AuthPage() {
     } catch (error: any) {
       console.error('Magic link error:', error);
       setMessage(error.message || 'Failed to send magic link');
+      setMessageType('error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async (email: string) => {
+    setLoading(true);
+    setMessage('');
+    setMessageType('info');
+    
+    try {
+      const supabase = createClient();
+      
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/confirm?type=email`,
+        },
+      });
+      
+      if (error) throw error;
+      
+      setMessage('Confirmation email resent! Please check your inbox.');
+      setMessageType('success');
+    } catch (error: any) {
+      console.error('Resend confirmation error:', error);
+      setMessage(error.message || 'Failed to resend confirmation email');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -214,6 +263,20 @@ export default function AuthPage() {
                   : 'bg-blue-50 text-blue-700 border border-blue-200'
               }`}>
                 {message}
+                {message.includes('check your email to confirm') && (
+                  <button
+                    onClick={() => {
+                      const email = (document.getElementById('email') as HTMLInputElement)?.value;
+                      if (email) {
+                        handleResendConfirmation(email);
+                      }
+                    }}
+                    disabled={loading}
+                    className="ml-2 text-primary-600 hover:text-primary-800 underline disabled:opacity-50"
+                  >
+                    Resend email
+                  </button>
+                )}
               </div>
             )}
             
