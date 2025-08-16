@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Zap, Shield, Compress, Eye, Settings2, CheckCircle2 } from 'lucide-react';
+import { Zap, Shield, Minimize2, Eye, Settings2, CheckCircle2 } from 'lucide-react';
 
 interface ProcessingOptions {
   rotate: number;
@@ -63,7 +63,7 @@ export default function PDFProcessor({ processingId, originalFile, onProcessComp
   const processingSteps = [
     { icon: Zap, name: 'Auto-Rotate', enabled: options.rotate !== 0 },
     { icon: Shield, name: 'Deskew', enabled: options.deskew },
-    { icon: Compress, name: 'Compress', enabled: options.compress },
+    { icon: Minimize2, name: 'Compress', enabled: options.compress },
     { icon: Eye, name: 'OCR', enabled: options.ocr }
   ];
 
