@@ -27,35 +27,56 @@ export default function DashboardPage() {
     const getProfile = async () => {
       // Skip if environment variables aren't set (during build)
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
+        console.log('Skipping auth - no env vars');
         setLoading(false);
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        setAuthToken(session.access_token);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Dashboard session check:', { session: !!session, user: session?.user?.id, error });
         
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+        if (session?.user) {
+          setAuthToken(session.access_token);
           
-        if (profile) {
-          setProfile({
-            id: session.user.id,
-            email: session.user.email!,
-            plan: profile.plan || 'free',
-            usage_this_week: profile.usage_this_week || 0,
-            total_pages_processed: profile.total_pages_processed || 0
-          });
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          console.log('Profile fetch:', { profile, profileError });
+            
+          if (profile) {
+            setProfile({
+              id: session.user.id,
+              email: session.user.email!,
+              plan: profile.plan || 'free',
+              usage_this_week: profile.usage_this_week || 0,
+              total_pages_processed: profile.total_pages_processed || 0
+            });
+          }
+        } else {
+          console.log('No session found in dashboard');
         }
+      } catch (error) {
+        console.error('Dashboard auth error:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     getProfile();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Dashboard auth state change:', event, !!session);
+      if (event === 'SIGNED_IN' && session) {
+        window.location.reload(); // Reload to get fresh profile data
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [supabase]);
 
   const handleSignOut = async () => {

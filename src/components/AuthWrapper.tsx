@@ -16,54 +16,91 @@ export default function AuthWrapper({ children, requireAuth = false }: AuthWrapp
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [message, setMessage] = useState<string>('');
+  
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || 'placeholder',
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
   );
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+    // Skip if environment variables aren't set (during build)
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
       setLoading(false);
+      return;
+    }
+
+    const getSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Session error:', error);
+        }
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error('Failed to get session:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     getSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.id);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        if (event === 'SIGNED_IN') {
+          setMessage('Successfully signed in!');
+          setTimeout(() => setMessage(''), 3000);
+        }
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+  }, [supabase]);
 
   const handleAuth = async (email: string, password: string) => {
-    setLoading(true);
+    setAuthLoading(true);
+    setMessage('');
     
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/dashboard`
           }
         });
+        
         if (error) throw error;
+        
+        if (data.user && !data.session) {
+          setMessage('Please check your email to confirm your account!');
+        } else if (data.session) {
+          setMessage('Account created successfully!');
+        }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password
         });
+        
         if (error) throw error;
+        
+        if (data.session) {
+          setMessage('Successfully signed in!');
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Auth error:', error);
+      setMessage(error.message || 'Authentication failed');
     } finally {
-      setLoading(false);
+      setAuthLoading(false);
     }
   };
 
@@ -122,13 +159,23 @@ export default function AuthWrapper({ children, requireAuth = false }: AuthWrapp
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? (
+              <Button type="submit" className="w-full" disabled={authLoading}>
+                {authLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : null}
                 {isSignUp ? 'Create Account' : 'Sign In'}
               </Button>
             </form>
+            
+            {message && (
+              <div className={`mt-4 p-3 rounded-md text-sm ${
+                message.includes('error') || message.includes('failed') 
+                  ? 'bg-red-50 text-red-700 border border-red-200' 
+                  : 'bg-green-50 text-green-700 border border-green-200'
+              }`}>
+                {message}
+              </div>
+            )}
             
             <div className="mt-4 text-center">
               <button
