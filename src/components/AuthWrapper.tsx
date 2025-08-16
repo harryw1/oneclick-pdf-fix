@@ -18,6 +18,7 @@ export default function AuthWrapper({ children, requireAuth = false }: AuthWrapp
   const [isSignUp, setIsSignUp] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [message, setMessage] = useState<string>('');
+  const [isTransitioning, setIsTransitioning] = useState(false);
   
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || 'placeholder',
@@ -70,10 +71,7 @@ export default function AuthWrapper({ children, requireAuth = false }: AuthWrapp
       if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({
           email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/dashboard`
-          }
+          password
         });
         
         if (error) throw error;
@@ -168,7 +166,7 @@ export default function AuthWrapper({ children, requireAuth = false }: AuthWrapp
             
             {message && (
               <div className={`mt-4 p-3 rounded-md text-sm ${
-                message.includes('error') || message.includes('failed') 
+                message.includes('error') || message.includes('failed') || message.includes('invalid') || message.includes('incorrect')
                   ? 'bg-red-50 text-red-700 border border-red-200' 
                   : 'bg-green-50 text-green-700 border border-green-200'
               }`}>
@@ -178,10 +176,18 @@ export default function AuthWrapper({ children, requireAuth = false }: AuthWrapp
             
             <div className="mt-4 text-center">
               <button
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm text-primary-600 hover:text-primary-800"
+                onClick={() => {
+                  setIsTransitioning(true);
+                  setMessage('');
+                  setTimeout(() => {
+                    setIsSignUp(!isSignUp);
+                    setIsTransitioning(false);
+                  }, 150);
+                }}
+                disabled={authLoading || isTransitioning}
+                className="text-sm text-primary-600 hover:text-primary-800 transition-all duration-150 disabled:opacity-50"
               >
-                {isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
+                {isTransitioning ? 'Switching...' : (isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up')}
               </button>
             </div>
           </CardContent>
