@@ -96,8 +96,25 @@ export default function HomePage() {
   }, []);
 
   const handleFileSelect = async (file: File) => {
+    console.log('=== FILE UPLOAD STARTED ===');
+    console.log('File details:', {
+      name: file.name,
+      size: file.size,
+      sizeMB: (file.size / (1024 * 1024)).toFixed(2),
+      type: file.type,
+      lastModified: new Date(file.lastModified).toISOString()
+    });
+    console.log('User state:', {
+      authenticated: !!user,
+      userId: user?.id,
+      email: user?.email,
+      hasAuthToken: !!authToken,
+      userPlan: userPlan
+    });
+
     // Check if user is authenticated
     if (!user || !authToken) {
+      console.error('Authentication check failed:', { user: !!user, authToken: !!authToken });
       setStatus({
         id: 'auth_error',
         status: 'error',
@@ -117,12 +134,18 @@ export default function HomePage() {
 
     try {
       // Upload file
+      console.log('Creating FormData for upload...');
       const formData = new FormData();
       formData.append('file', file);
+      console.log('FormData created, starting upload request...');
       
       const uploadController = new AbortController();
       const uploadTimeout = setTimeout(() => uploadController.abort(), 30000); // 30 second timeout
       
+      console.log('Making upload request with headers:', {
+        'Authorization': `Bearer ${authToken.substring(0, 20)}...`
+      });
+
       const uploadResponse = await fetch('/api/upload', {
         method: 'POST',
         headers: {
@@ -134,21 +157,47 @@ export default function HomePage() {
       
       clearTimeout(uploadTimeout);
       
+      console.log('Upload response received:', {
+        status: uploadResponse.status,
+        statusText: uploadResponse.statusText,
+        headers: Object.fromEntries(uploadResponse.headers.entries())
+      });
+      
       if (!uploadResponse.ok) {
         let errorData;
+        let responseText = '';
+        
         try {
-          errorData = await uploadResponse.json();
-        } catch {
+          responseText = await uploadResponse.text();
+          console.log('Raw response text:', responseText);
+          errorData = JSON.parse(responseText);
+          console.log('Parsed error data:', errorData);
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          console.log('Raw response was:', responseText);
+          
           // Handle non-JSON responses (like 413 errors)
           if (uploadResponse.status === 413) {
-            throw new Error('File too large. Free tier supports files up to 10MB.');
+            throw new Error('File too large. Free tier supports files up to 15MB (debugging).');
           }
           throw new Error(`Upload failed with status ${uploadResponse.status}`);
         }
         throw new Error(errorData.error || errorData.message || 'Upload failed');
       }
       
-      const { processingId } = await uploadResponse.json();
+      let uploadResult;
+      try {
+        const responseText = await uploadResponse.text();
+        console.log('Upload success response text:', responseText);
+        uploadResult = JSON.parse(responseText);
+        console.log('Upload success data:', uploadResult);
+      } catch (parseError) {
+        console.error('Failed to parse upload success response:', parseError);
+        throw new Error('Invalid response from upload server');
+      }
+      
+      const { processingId } = uploadResult;
+      console.log('Processing ID received:', processingId);
       
       setStatus({
         id: processingId,
@@ -158,8 +207,22 @@ export default function HomePage() {
       });
 
       // Process PDF
+      console.log('=== STARTING PDF PROCESSING ===');
+      console.log('Processing ID:', processingId);
+      
       const processController = new AbortController();
       const processTimeout = setTimeout(() => processController.abort(), 120000); // 2 minute timeout
+      
+      const processPayload = {
+        processingId,
+        options: {
+          rotate: 0,
+          deskew: true,
+          compress: true,
+          ocr: true
+        }
+      };
+      console.log('Process request payload:', processPayload);
       
       const processResponse = await fetch('/api/process', {
         method: 'POST',
@@ -167,38 +230,47 @@ export default function HomePage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
         },
-        body: JSON.stringify({
-          processingId,
-          options: {
-            rotate: 0,
-            deskew: true,
-            compress: true,
-            ocr: true
-          }
-        }),
+        body: JSON.stringify(processPayload),
         signal: processController.signal,
       });
       
       clearTimeout(processTimeout);
-      console.log('Process response status:', processResponse.status);
-      console.log('Process response headers:', Object.fromEntries(processResponse.headers.entries()));
+      console.log('Process response received:', {
+        status: processResponse.status,
+        statusText: processResponse.statusText,
+        headers: Object.fromEntries(processResponse.headers.entries())
+      });
       
       if (!processResponse.ok) {
         let errorData;
+        let responseText = '';
+        
         try {
-          errorData = await processResponse.json();
-        } catch {
+          responseText = await processResponse.text();
+          console.log('Process error response text:', responseText);
+          errorData = JSON.parse(responseText);
+          console.log('Process error data:', errorData);
+        } catch (parseError) {
+          console.error('Failed to parse process error response:', parseError);
+          console.log('Raw process error response was:', responseText);
           throw new Error(`Processing failed with status ${processResponse.status}`);
         }
-        throw new Error(errorData.error || 'Processing failed');
+        throw new Error(errorData.error || errorData.message || 'Processing failed');
       }
       
       let processResult;
       try {
-        processResult = await processResponse.json();
-      } catch {
+        const responseText = await processResponse.text();
+        console.log('Process success response text:', responseText);
+        processResult = JSON.parse(responseText);
+        console.log('Process success data:', processResult);
+      } catch (parseError) {
+        console.error('Failed to parse process success response:', parseError);
         throw new Error('Invalid response from server');
       }
+      
+      console.log('=== PROCESSING COMPLETED SUCCESSFULLY ===');
+      console.log('Final result:', processResult.result);
       
       setStatus({
         id: processingId,
@@ -209,16 +281,23 @@ export default function HomePage() {
       
       setResult(processResult.result);
     } catch (error) {
-      console.error('Processing error:', error);
+      console.error('=== ERROR OCCURRED ===');
+      console.error('Error type:', error?.constructor?.name);
+      console.error('Error message:', error instanceof Error ? error.message : error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('Full error object:', error);
       
       let errorMessage = 'Something went wrong. Please try again.';
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
           errorMessage = 'Request timed out. Please try again with a smaller file.';
+          console.log('Request was aborted due to timeout');
         } else {
           errorMessage = error.message;
         }
       }
+      
+      console.log('Final error message shown to user:', errorMessage);
       
       setStatus({
         id: 'error',
@@ -227,6 +306,7 @@ export default function HomePage() {
         error: errorMessage
       });
     } finally {
+      console.log('=== PROCESSING FINISHED ===');
       setProcessing(false);
     }
   };
