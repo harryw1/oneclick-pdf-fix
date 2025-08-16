@@ -62,7 +62,7 @@ export default async function handler(
     const userPlan = profile?.plan || 'free';
     const maxFileSize = userPlan === 'pro' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
     
-    console.log('User plan:', userPlan, 'Max file size:', maxFileSize);
+    console.log('User plan:', userPlan, 'Max file size (bytes):', maxFileSize, 'Max file size (MB):', maxFileSize / (1024 * 1024));
     
     const form = formidable({
       uploadDir: '/tmp',
@@ -78,6 +78,7 @@ export default async function handler(
       console.error('Formidable parsing error:', formError);
       console.error('Error code:', formError.code);
       console.error('Error message:', formError.message);
+      console.error('Full error object:', JSON.stringify(formError, null, 2));
       
       if (formError.code === 'LIMIT_FILE_SIZE' || 
           formError.message?.includes('maxFileSize') || 
@@ -86,7 +87,9 @@ export default async function handler(
           error: 'File too large',
           message: `File size exceeds ${userPlan === 'pro' ? '100MB' : '10MB'} limit. ${userPlan === 'free' ? 'Upgrade to Pro for 100MB files.' : ''}`,
           userPlan,
-          maxFileSize
+          maxFileSizeMB: maxFileSize / (1024 * 1024),
+          actualErrorCode: formError.code,
+          actualErrorMessage: formError.message
         });
       }
       throw formError;
@@ -97,6 +100,12 @@ export default async function handler(
     if (!file) {
       return res.status(400).json({ error: 'No PDF file uploaded' });
     }
+
+    console.log('File uploaded successfully:');
+    console.log('- Name:', file.originalFilename);
+    console.log('- Size (bytes):', file.size);
+    console.log('- Size (MB):', (file.size / (1024 * 1024)).toFixed(2));
+    console.log('- MIME type:', file.mimetype);
 
     // Generate unique processing ID
     const processingId = `pdf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
