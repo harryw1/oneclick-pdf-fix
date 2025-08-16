@@ -1,6 +1,5 @@
 import Head from 'next/head';
 import { FileText, Calendar, Download } from 'lucide-react';
-import AuthWrapper from '@/components/AuthWrapper';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { GetServerSideProps } from 'next';
@@ -13,76 +12,35 @@ interface UserProfile {
   total_pages_processed: number;
 }
 
-export default function DashboardPage() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+interface DashboardProps {
+  user: {
+    id: string;
+    email: string;
+  };
+  profile: UserProfile | null;
+}
+
+export default function DashboardPage({ user, profile: initialProfile }: DashboardProps) {
+  const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
   const [authToken, setAuthToken] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
-    const getProfile = async () => {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
-        if (user) {
-          const { data: { session } } = await supabase.auth.getSession();
-          setAuthToken(session?.access_token || null);
-          
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-            
-          if (profile) {
-            setProfile({
-              id: user.id,
-              email: user.email!,
-              plan: profile.plan || 'free',
-              usage_this_week: profile.usage_this_week || 0,
-              total_pages_processed: profile.total_pages_processed || 0
-            });
-          } else {
-            console.error('Profile not found:', profileError);
-          }
-        } else {
-          // No user found - clear state but still stop loading
-          setProfile(null);
-          setAuthToken(null);
-        }
-      } catch (error) {
-        console.error('Dashboard auth error:', error);
-      } finally {
-        setLoading(false);
-      }
+    
+    // Get initial session token
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setAuthToken(session?.access_token || null);
     };
+    
+    getSession();
 
-    getProfile();
-
-    // Listen for auth state changes
+    // Listen for auth state changes (for sign out only)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        // Refresh profile data instead of reloading page
+      if (event === 'SIGNED_OUT') {
+        window.location.href = '/';
+      } else if (event === 'SIGNED_IN' && session) {
         setAuthToken(session.access_token);
-        
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-          
-        if (profile) {
-          setProfile({
-            id: session.user.id,
-            email: session.user.email!,
-            plan: profile.plan || 'free',
-            usage_this_week: profile.usage_this_week || 0,
-            total_pages_processed: profile.total_pages_processed || 0
-          });
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setProfile(null);
-        setAuthToken(null);
       }
     });
 
@@ -91,8 +49,12 @@ export default function DashboardPage() {
 
   const handleSignOut = async () => {
     const supabase = createClient();
-    await supabase.auth.signOut();
-    window.location.href = '/';
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Sign out error:', error);
+    } else {
+      window.location.href = '/';
+    }
   };
 
   const handleManageSubscription = async () => {
@@ -121,20 +83,8 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <AuthWrapper requireAuth={true}>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading dashboard...</p>
-          </div>
-        </div>
-      </AuthWrapper>
-    );
-  }
   return (
-    <AuthWrapper requireAuth={true}>
+    <>
       <Head>
         <title>Dashboard - OneClick PDF Fixer</title>
         <meta name="description" content="Manage your PDF processing history and account" />
@@ -146,7 +96,7 @@ export default function DashboardPage() {
             <div className="flex justify-between items-center">
               <a href="/" className="text-2xl font-bold text-gray-900">OneClick PDF Fixer</a>
               <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600">Welcome, {profile?.email}</span>
+                <span className="text-sm text-gray-600">Welcome, {user.email}!</span>
                 {profile?.plan === 'free' ? (
                   <a href="/pricing" className="btn-primary">Upgrade to Pro</a>
                 ) : (
@@ -168,38 +118,38 @@ export default function DashboardPage() {
 
           {/* Usage Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <FileText className="h-8 w-8 text-primary-500" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Pages This Week</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {profile?.usage_this_week || 0} / {profile?.plan === 'pro' ? '∞' : '10'}
-                  </p>
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <FileText className="h-8 w-8 text-primary-500" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Pages This Week</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {profile?.usage_this_week || 0} / {profile?.plan === 'pro' ? '∞' : '10'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <Calendar className="h-8 w-8 text-green-500" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Plan</p>
+                    <p className="text-2xl font-bold text-gray-900 capitalize">{profile?.plan || 'Free'}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center">
+                  <Download className="h-8 w-8 text-blue-500" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">Total Processed</p>
+                    <p className="text-2xl font-bold text-gray-900">{profile?.total_pages_processed || 0}</p>
+                  </div>
                 </div>
               </div>
             </div>
-            
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <Calendar className="h-8 w-8 text-green-500" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Plan</p>
-                  <p className="text-2xl font-bold text-gray-900 capitalize">{profile?.plan || 'Free'}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center">
-                <Download className="h-8 w-8 text-blue-500" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Total Processed</p>
-                  <p className="text-2xl font-bold text-gray-900">{profile?.total_pages_processed || 0}</p>
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Recent Files */}
           <div className="bg-white rounded-lg shadow">
@@ -219,13 +169,69 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </AuthWrapper>
+    </>
   );
 }
 
-// Force client-side rendering to avoid build issues with Supabase
-export const getServerSideProps: GetServerSideProps = async () => {
+// Server-side authentication - prevents infinite loading
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { createServerClient } = await import('@supabase/ssr');
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return Object.entries(context.req.cookies).map(([name, value]) => ({
+            name,
+            value: value as string,
+          }));
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            if (context.res) {
+              context.res.setHeader('Set-Cookie', `${name}=${value}; Path=/; HttpOnly`);
+            }
+          });
+        },
+      },
+    }
+  );
+  
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error || !user) {
+    return {
+      redirect: {
+        destination: '/',
+        permanent: false,
+      },
+    };
+  }
+
+  // Get user profile
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  const userProfile = profile ? {
+    id: user.id,
+    email: user.email!,
+    plan: profile.plan || 'free',
+    usage_this_week: profile.usage_this_week || 0,
+    total_pages_processed: profile.total_pages_processed || 0
+  } : null;
+
   return {
-    props: {}
+    props: {
+      user: {
+        id: user.id,
+        email: user.email!,
+      },
+      profile: userProfile,
+    },
   };
 };

@@ -201,13 +201,6 @@ export default function AuthWrapper({ children, requireAuth = false }: AuthWrapp
   return (
     <>
       {children}
-      {user && (
-        <div className="fixed bottom-4 right-4">
-          <Button variant="outline" onClick={handleSignOut} size="sm">
-            Sign Out
-          </Button>
-        </div>
-      )}
     </>
   );
 }

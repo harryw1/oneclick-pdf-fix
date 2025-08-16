@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Check, Zap, Sparkles, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/utils/supabase/client';
 import { GetServerSideProps } from 'next';
 
 export default function PricingPage() {
@@ -13,17 +13,10 @@ export default function PricingPage() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'placeholder',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
-  );
-
   useEffect(() => {
+    const supabase = createClient();
+    
     const getSession = async () => {
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
-        return;
-      }
-
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setUser(session.user);
@@ -32,10 +25,6 @@ export default function PricingPage() {
     };
 
     getSession();
-
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
-      return;
-    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -50,7 +39,7 @@ export default function PricingPage() {
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
 
   const handleUpgrade = async () => {
     if (!user || !authToken) {

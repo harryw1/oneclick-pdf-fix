@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Download, Zap, Shield, Clock, Star, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/utils/supabase/client';
 import type { ProcessingStatus } from '@/types/pdf';
 import { GetServerSideProps } from 'next';
 
@@ -19,18 +19,10 @@ export default function HomePage() {
   const [user, setUser] = useState<any>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'placeholder',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
-  );
-
   useEffect(() => {
+    const supabase = createClient();
+    
     const getSession = async () => {
-      // Skip if environment variables aren't set (during build)
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
-        return;
-      }
-
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setUser(session.user);
@@ -39,11 +31,6 @@ export default function HomePage() {
     };
 
     getSession();
-
-    // Skip auth state change listener during build
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'placeholder') {
-      return;
-    }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -58,7 +45,7 @@ export default function HomePage() {
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, []);
 
   const handleFileSelect = async (file: File) => {
     // Check if user is authenticated
