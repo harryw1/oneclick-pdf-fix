@@ -2,6 +2,7 @@ import Head from 'next/head';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { createClient } from '@/utils/supabase/client';
+import { getAuthRedirectUrl } from '@/utils/config';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, LogIn, UserPlus, Mail, Key } from 'lucide-react';
@@ -88,7 +89,7 @@ export default function AuthPage() {
       const supabase = createClient();
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/confirm`,
+        redirectTo: getAuthRedirectUrl('/auth/confirm'),
       });
       
       if (error) throw error;
@@ -116,7 +117,7 @@ export default function AuthPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+          emailRedirectTo: getAuthRedirectUrl('/auth/confirm'),
         },
       });
       
@@ -145,7 +146,7 @@ export default function AuthPage() {
         type: 'signup',
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+          emailRedirectTo: getAuthRedirectUrl('/auth/confirm'),
         },
       });
       
