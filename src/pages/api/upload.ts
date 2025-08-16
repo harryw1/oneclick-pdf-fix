@@ -60,7 +60,8 @@ export default async function handler(
   try {
     // Set maxFileSize based on user tier - default to free if profile not found
     const userPlan = profile?.plan || 'free';
-    const maxFileSize = userPlan === 'pro' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    // Temporarily allow 15MB for free tier to debug the issue
+    const maxFileSize = userPlan === 'pro' ? 100 * 1024 * 1024 : 15 * 1024 * 1024;
     
     console.log('User plan:', userPlan, 'Max file size (bytes):', maxFileSize, 'Max file size (MB):', maxFileSize / (1024 * 1024));
     
