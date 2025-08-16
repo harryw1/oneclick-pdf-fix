@@ -55,6 +55,10 @@ export default function DashboardPage() {
           } else {
             console.error('Profile not found:', profileError);
           }
+        } else {
+          // No session found - clear state but still stop loading
+          setProfile(null);
+          setAuthToken(null);
         }
       } catch (error) {
         console.error('Dashboard auth error:', error);
