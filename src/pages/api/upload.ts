@@ -56,32 +56,36 @@ export default async function handler(
     .single();
 
   try {
+    // Set maxFileSize based on user tier
+    const maxFileSize = profile?.plan === 'pro' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    
     const form = formidable({
       uploadDir: '/tmp',
       keepExtensions: true,
-      maxFileSize: 100 * 1024 * 1024, // 100MB - we'll check user tier separately
+      maxFileSize: maxFileSize,
       filter: ({ mimetype }) => mimetype === 'application/pdf',
     });
 
-    const [fields, files] = await form.parse(req);
+    let fields, files;
+    try {
+      [fields, files] = await form.parse(req);
+    } catch (formError: any) {
+      console.error('Formidable parsing error:', formError);
+      if (formError.code === 'LIMIT_FILE_SIZE' || formError.message?.includes('maxFileSize')) {
+        return res.status(413).json({ 
+          error: 'File too large',
+          message: profile?.plan === 'pro' 
+            ? 'Maximum file size is 100MB' 
+            : 'Free tier maximum file size is 10MB. Upgrade to Pro for 100MB files.'
+        });
+      }
+      throw formError;
+    }
+    
     const file = Array.isArray(files.file) ? files.file[0] : files.file;
 
     if (!file) {
       return res.status(400).json({ error: 'No PDF file uploaded' });
-    }
-
-    // Check file size limits based on user tier
-    const maxFileSize = profile?.plan === 'pro' ? 100 * 1024 * 1024 : 10 * 1024 * 1024; // 100MB for pro, 10MB for free
-    if (file.size > maxFileSize) {
-      await fs.unlink(file.filepath); // Clean up uploaded file
-      return res.status(413).json({ 
-        error: 'File too large', 
-        message: profile?.plan === 'pro' 
-          ? 'Maximum file size is 100MB' 
-          : 'Free tier maximum file size is 10MB. Upgrade to Pro for 100MB files.',
-        currentSize: file.size,
-        maxSize: maxFileSize
-      });
     }
 
     // Generate unique processing ID

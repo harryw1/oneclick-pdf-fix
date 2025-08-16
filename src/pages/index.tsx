@@ -115,8 +115,17 @@ export default function HomePage() {
       clearTimeout(uploadTimeout);
       
       if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json();
-        throw new Error(errorData.error || 'Upload failed');
+        let errorData;
+        try {
+          errorData = await uploadResponse.json();
+        } catch {
+          // Handle non-JSON responses (like 413 errors)
+          if (uploadResponse.status === 413) {
+            throw new Error('File too large. Free tier supports files up to 10MB.');
+          }
+          throw new Error(`Upload failed with status ${uploadResponse.status}`);
+        }
+        throw new Error(errorData.error || errorData.message || 'Upload failed');
       }
       
       const { processingId } = await uploadResponse.json();
