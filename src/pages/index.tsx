@@ -20,6 +20,33 @@ export default function HomePage() {
   const [authToken, setAuthToken] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check if this is an auth callback that should go to /auth/confirm
+    const checkAuthCallback = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      
+      // Check for auth callback parameters
+      const hasAuthParams = 
+        urlParams.get('token_hash') || 
+        urlParams.get('type') || 
+        hashParams.get('access_token') || 
+        hashParams.get('refresh_token');
+      
+      if (hasAuthParams) {
+        console.log('Auth callback detected on homepage, redirecting to /auth/confirm');
+        // Preserve the URL parameters and redirect
+        const newUrl = `/auth/confirm${window.location.search}${window.location.hash}`;
+        window.location.href = newUrl;
+        return true;
+      }
+      return false;
+    };
+
+    // If this is an auth callback, redirect before doing anything else
+    if (checkAuthCallback()) {
+      return;
+    }
+
     const supabase = createClient();
     
     const getSession = async () => {

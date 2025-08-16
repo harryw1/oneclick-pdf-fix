@@ -14,20 +14,58 @@ export default function AuthConfirmPage() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const { token_hash, type, next } = router.query;
+        // First, let's get URL parameters from both query and hash
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
         
-        // Log the received parameters for debugging
-        console.log('Auth callback params:', { token_hash, type, next, allQuery: router.query });
+        // Check both query params and router query
+        let token_hash = router.query.token_hash || urlParams.get('token_hash') || hashParams.get('access_token');
+        let type = router.query.type || urlParams.get('type') || hashParams.get('type');
+        let next = router.query.next || urlParams.get('next');
         
+        // Log everything for debugging
+        console.log('=== Auth Callback Debug ===');
+        console.log('URL:', window.location.href);
+        console.log('Router query:', router.query);
+        console.log('URL search params:', Object.fromEntries(urlParams.entries()));
+        console.log('Hash params:', Object.fromEntries(hashParams.entries()));
+        console.log('Extracted params:', { token_hash, type, next });
+        
+        const supabase = createClient();
+        
+        // If we have an access_token in the hash, this is likely from a magic link
+        // Let's try to get the session directly
+        if (hashParams.get('access_token') && hashParams.get('refresh_token')) {
+          console.log('Detected tokens in hash, setting session...');
+          
+          const { data, error } = await supabase.auth.setSession({
+            access_token: hashParams.get('access_token')!,
+            refresh_token: hashParams.get('refresh_token')!
+          });
+          
+          if (error) {
+            console.error('Session setting error:', error);
+            throw error;
+          }
+          
+          console.log('Session set successfully:', data);
+          setStatus('success');
+          setMessage('Authentication successful! Redirecting to your dashboard...');
+          
+          setTimeout(() => {
+            router.push('/dashboard');
+          }, 2000);
+          return;
+        }
+        
+        // Otherwise, try the OTP verification approach
         if (!token_hash || !type) {
           setStatus('error');
           setMessage('Invalid confirmation link. Please request a new one.');
           return;
         }
 
-        const supabase = createClient();
-        
-        // Use verifyOtp for all types - Supabase handles the type internally
+        console.log('Attempting OTP verification...');
         const { data, error } = await supabase.auth.verifyOtp({
           token_hash: token_hash as string,
           type: type as any
@@ -65,7 +103,7 @@ export default function AuthConfirmPage() {
       }
     };
 
-    // Only run when router is ready and we have query params
+    // Only run when router is ready
     if (router.isReady) {
       handleAuthCallback();
     }
