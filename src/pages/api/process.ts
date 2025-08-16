@@ -57,18 +57,27 @@ export default async function handler(
     return res.status(401).json({ error: 'Invalid authentication' });
   }
 
+  // Create authenticated supabase client for database operations
+  const userSupabase = createClient(supabaseUrl!, supabaseAnonKey!, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  });
+
   // Get user profile and check usage limits
-  let { data: profile, error: profileError } = await supabase
+  let { data: profile, error: profileError } = await userSupabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single();
 
-  // If profile doesn't exist, create it
+  // If profile doesn't exist, create it with proper auth context
   if (profileError || !profile) {
     console.log('Profile not found for user:', user.id, 'Creating new profile...');
     
-    const { data: newProfile, error: createError } = await supabase
+    const { data: newProfile, error: createError } = await userSupabase
       .from('profiles')
       .insert({
         id: user.id,
@@ -82,10 +91,22 @@ export default async function handler(
 
     if (createError) {
       console.error('Failed to create profile:', createError);
-      return res.status(500).json({ error: 'Failed to create user profile' });
+      console.error('Create error details:', JSON.stringify(createError, null, 2));
+      
+      // If profile creation fails, try to use default values for processing
+      console.log('Using default profile values for processing...');
+      profile = {
+        id: user.id,
+        email: user.email!,
+        plan: 'free',
+        usage_this_week: 0,
+        total_pages_processed: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+    } else {
+      profile = newProfile;
     }
-
-    profile = newProfile;
   }
 
   try {
@@ -181,11 +202,11 @@ export default async function handler(
       options,
     };
 
-    // Update user usage statistics
+    // Update user usage statistics using authenticated client
     const newUsageThisWeek = profile.usage_this_week + pageCount;
     const newTotalProcessed = profile.total_pages_processed + pageCount;
 
-    await supabase
+    const { error: updateError } = await userSupabase
       .from('profiles')
       .update({
         usage_this_week: newUsageThisWeek,
@@ -195,8 +216,12 @@ export default async function handler(
       })
       .eq('id', user.id);
 
+    if (updateError) {
+      console.error('Failed to update profile:', updateError);
+    }
+
     // Record processing history
-    await supabase
+    const { error: historyError } = await userSupabase
       .from('processing_history')
       .insert({
         user_id: user.id,
@@ -208,6 +233,10 @@ export default async function handler(
         status: 'completed',
         completed_at: new Date().toISOString()
       });
+
+    if (historyError) {
+      console.error('Failed to insert processing history:', historyError);
+    }
 
     // Clean up input file
     await fs.unlink(inputPath);
