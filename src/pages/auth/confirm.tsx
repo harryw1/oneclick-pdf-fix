@@ -36,39 +36,80 @@ export default function AuthConfirmPage() {
         
         const supabase = createClient();
         
-        // PKCE flow - exchange code for session (modern approach)
+        // PKCE flow - use auth state change listener
         if (code) {
-          console.log('Detected PKCE code, exchanging for session...');
+          console.log('Detected PKCE code, setting up auth state listener...');
           
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code as string);
+          // Set up a one-time auth state change listener
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+              console.log('Auth state change:', event, session);
+              
+              if (event === 'SIGNED_IN' && session) {
+                console.log('User signed in via PKCE flow:', session);
+                setStatus('success');
+                
+                // Check what type of auth flow this was
+                const authFlowType = localStorage.getItem('auth-flow-type');
+                console.log('Auth flow type:', authFlowType);
+                
+                // Clear the auth flow type
+                localStorage.removeItem('auth-flow-type');
+                
+                // Unsubscribe from the listener
+                subscription.unsubscribe();
+                
+                if (authFlowType === 'password-reset') {
+                  setMessage('Password reset confirmed! You can now set a new password.');
+                  setTimeout(() => {
+                    router.push('/auth/update-password');
+                  }, 2000);
+                } else {
+                  setMessage('Authentication successful! Redirecting to your dashboard...');
+                  const redirectUrl = (next as string) || '/dashboard';
+                  setTimeout(() => {
+                    router.push(redirectUrl);
+                  }, 2000);
+                }
+              } else if (event === 'SIGNED_OUT' || !session) {
+                console.log('Auth state change but no session');
+              }
+            }
+          );
           
-          if (error) {
-            console.error('Code exchange error:', error);
-            throw error;
-          }
-          
-          console.log('Code exchange successful:', data);
-          setStatus('success');
-          
-          // Check what type of auth flow this was
-          const authFlowType = localStorage.getItem('auth-flow-type');
-          console.log('Auth flow type:', authFlowType);
-          
-          // Clear the auth flow type
-          localStorage.removeItem('auth-flow-type');
-          
-          if (authFlowType === 'password-reset') {
-            setMessage('Password reset confirmed! You can now set a new password.');
-            setTimeout(() => {
-              router.push('/auth/update-password');
-            }, 2000);
+          // Also try to get the current session immediately
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            console.log('Session already exists:', session);
+            setStatus('success');
+            
+            const authFlowType = localStorage.getItem('auth-flow-type');
+            localStorage.removeItem('auth-flow-type');
+            subscription.unsubscribe();
+            
+            if (authFlowType === 'password-reset') {
+              setMessage('Password reset confirmed! You can now set a new password.');
+              setTimeout(() => {
+                router.push('/auth/update-password');
+              }, 2000);
+            } else {
+              setMessage('Authentication successful! Redirecting to your dashboard...');
+              const redirectUrl = (next as string) || '/dashboard';
+              setTimeout(() => {
+                router.push(redirectUrl);
+              }, 2000);
+            }
           } else {
-            setMessage('Authentication successful! Redirecting to your dashboard...');
-            const redirectUrl = (next as string) || '/dashboard';
+            // Set a timeout to show error if no auth state change occurs
             setTimeout(() => {
-              router.push(redirectUrl);
-            }, 2000);
+              subscription.unsubscribe();
+              if (status === 'loading') {
+                setStatus('error');
+                setMessage('Authentication timed out. Please try again.');
+              }
+            }, 10000); // 10 second timeout
           }
+          
           return;
         }
         
