@@ -48,28 +48,28 @@ export default function FileUpload({ onFileSelect, processing, status }: FileUpl
       <div className="card-modern">
         <div
           {...getRootProps()}
-          className={`upload-zone ${isDragActive ? 'dragover' : ''} ${
-            processing ? 'opacity-60 cursor-not-allowed' : ''
+          className={`upload-zone group ${isDragActive ? 'dragover' : ''} ${
+            processing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
           }`}
         >
           <input {...getInputProps()} />
           
           {!selectedFile ? (
-            <div className="space-y-6 animate-slide-up">
+            <div className="space-y-4 sm:space-y-6 animate-slide-up">
               <div className="relative">
-                <Upload className={`mx-auto h-16 w-16 transition-all duration-300 ${
+                <Upload className={`mx-auto h-12 w-12 sm:h-16 sm:w-16 transition-all duration-300 ${
                   isDragActive ? 'text-blue-500 scale-110' : 'text-gray-400 group-hover:text-blue-500 group-hover:scale-105'
                 }`} />
                 <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
-              <div className="space-y-3">
-                <p className="text-2xl font-bold text-gray-800">
+              <div className="space-y-2 sm:space-y-3">
+                <p className="text-lg sm:text-2xl font-bold text-gray-800">
                   {isDragActive ? '✨ Drop your PDF here' : 'Drag and drop your PDF'}
                 </p>
-                <p className="text-gray-600">
-                  or click to browse • Max 100MB
+                <p className="text-sm sm:text-base text-gray-600">
+                  or tap to browse • Max 100MB
                 </p>
-                <div className="inline-block bg-gray-100 text-gray-700 text-sm font-medium px-3 py-1 rounded-full">
+                <div className="inline-block bg-gray-100 text-gray-700 text-xs sm:text-sm font-medium px-3 py-1 rounded-full">
                   PDF files only
                 </div>
               </div>

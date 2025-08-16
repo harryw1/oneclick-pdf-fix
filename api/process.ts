@@ -45,14 +45,34 @@ export default async function handler(
   }
 
   // Get user profile and check usage limits
-  const { data: profile, error: profileError } = await supabase
+  let { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single();
 
+  // If profile doesn't exist, create it
   if (profileError || !profile) {
-    return res.status(404).json({ error: 'User profile not found' });
+    console.log('Profile not found for user:', user.id, 'Creating new profile...');
+    
+    const { data: newProfile, error: createError } = await supabase
+      .from('profiles')
+      .insert({
+        id: user.id,
+        email: user.email!,
+        plan: 'free',
+        usage_this_week: 0,
+        total_pages_processed: 0
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('Failed to create profile:', createError);
+      return res.status(500).json({ error: 'Failed to create user profile' });
+    }
+
+    profile = newProfile;
   }
 
   try {

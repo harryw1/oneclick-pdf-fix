@@ -78,7 +78,12 @@ export default function HomePage() {
   const handleFileSelect = async (file: File) => {
     // Check if user is authenticated
     if (!user || !authToken) {
-      alert('Please sign in to process PDFs');
+      setStatus({
+        id: 'auth_error',
+        status: 'error',
+        progress: 0,
+        error: 'Please sign in to process PDFs'
+      });
       return;
     }
 
@@ -86,8 +91,8 @@ export default function HomePage() {
     setStatus({
       id: 'temp',
       status: 'uploading',
-      progress: 0,
-      message: 'Uploading PDF...'
+      progress: 10,
+      message: 'Uploading your PDF...'
     });
 
     try {
@@ -101,7 +106,8 @@ export default function HomePage() {
       });
       
       if (!uploadResponse.ok) {
-        throw new Error('Upload failed');
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.error || 'Upload failed');
       }
       
       const { processingId } = await uploadResponse.json();
@@ -109,8 +115,8 @@ export default function HomePage() {
       setStatus({
         id: processingId,
         status: 'processing',
-        progress: 50,
-        message: 'Processing PDF...'
+        progress: 60,
+        message: 'Processing your PDF with AI...'
       });
 
       // Process PDF
@@ -132,7 +138,8 @@ export default function HomePage() {
       });
       
       if (!processResponse.ok) {
-        throw new Error('Processing failed');
+        const errorData = await processResponse.json();
+        throw new Error(errorData.error || 'Processing failed');
       }
       
       const processResult = await processResponse.json();
@@ -141,16 +148,17 @@ export default function HomePage() {
         id: processingId,
         status: 'completed',
         progress: 100,
-        message: 'PDF processed successfully!'
+        message: 'Your PDF has been fixed and is ready to download!'
       });
       
       setResult(processResult.result);
     } catch (error) {
+      console.error('Processing error:', error);
       setStatus({
         id: 'error',
         status: 'error',
         progress: 0,
-        error: error instanceof Error ? error.message : 'Processing failed'
+        error: error instanceof Error ? error.message : 'Something went wrong. Please try again.'
       });
     } finally {
       setProcessing(false);
@@ -160,26 +168,26 @@ export default function HomePage() {
   const features = [
     {
       icon: Zap,
-      title: "Auto-Rotate",
-      description: "Intelligent rotation detection",
+      title: "Smart Rotate",
+      description: "Auto-detects and fixes orientation",
       color: "text-yellow-500"
     },
     {
       icon: Shield,
       title: "Deskew",
-      description: "Straighten crooked scans",
+      description: "Straightens crooked documents",
       color: "text-green-500"
     },
     {
       icon: Download,
       title: "Compress",
-      description: "Optimize file size",
+      description: "Reduces file size intelligently",
       color: "text-blue-500"
     },
     {
       icon: Clock,
-      title: "OCR Search",
-      description: "Make text searchable",
+      title: "OCR Ready",
+      description: "Makes text fully searchable",
       color: "text-purple-500"
     }
   ];
@@ -196,25 +204,25 @@ export default function HomePage() {
         {/* Header */}
         <header className="glass-effect border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0">
               <div className="flex items-center space-x-2">
                 <div className="h-8 w-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
                   <Sparkles className="h-5 w-5 text-white" />
                 </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
                   OneClick PDF Fixer
                 </h1>
               </div>
-              <div className="flex space-x-3">
-                <Button variant="ghost" asChild>
+              <div className="flex space-x-2 sm:space-x-3">
+                <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
                   <a href="/pricing">Pricing</a>
                 </Button>
                 {user ? (
-                  <Button asChild>
+                  <Button size="sm" asChild>
                     <a href="/dashboard">Dashboard</a>
                   </Button>
                 ) : (
-                  <Button asChild>
+                  <Button size="sm" asChild>
                     <a href="/auth">Sign In</a>
                   </Button>
                 )}
@@ -224,33 +232,33 @@ export default function HomePage() {
         </header>
 
         {/* Hero Section */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <div className="text-center mb-16 animate-fade-in">
-            <div className="inline-flex items-center space-x-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
-              <Star className="h-4 w-4" />
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16">
+          <div className="text-center mb-12 sm:mb-16 animate-fade-in">
+            <div className="inline-flex items-center space-x-2 bg-primary/10 text-primary px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium mb-4 sm:mb-6">
+              <Star className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Trusted by 10,000+ users</span>
             </div>
             
-            <h2 className="text-5xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4 sm:mb-6 leading-tight px-2">
               Fix Your PDFs in{' '}
               <span className="bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent">
                 One Click
               </span>
             </h2>
             
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-              Transform mis-scanned or sideways PDFs into perfect, searchable documents. 
-              No software needed — just drag, drop, and download.
+            <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-4">
+              Transform crooked, sideways, or messy scanned PDFs into perfectly readable documents. 
+              No software downloads — just drag, drop, and download your fixed PDF in seconds.
             </p>
             
             {/* Features Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-12 sm:mb-16">
               {features.map((feature, index) => (
                 <Card key={feature.title} className="group hover:shadow-lg transition-all duration-300 animate-slide-up border-0 bg-white/50 backdrop-blur-sm" style={{ animationDelay: `${index * 100}ms` }}>
-                  <CardContent className="p-6 text-center">
-                    <feature.icon className={cn("h-8 w-8 mx-auto mb-3 transition-transform group-hover:scale-110", feature.color)} />
-                    <h3 className="font-semibold text-foreground mb-1">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  <CardContent className="p-3 sm:p-6 text-center">
+                    <feature.icon className={cn("h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 sm:mb-3 transition-transform group-hover:scale-110", feature.color)} />
+                    <h3 className="font-semibold text-foreground mb-1 text-sm sm:text-base">{feature.title}</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{feature.description}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -268,12 +276,12 @@ export default function HomePage() {
             ) : (
               <Card className="max-w-2xl mx-auto">
                 <CardContent className="p-8 text-center">
-                  <h3 className="text-xl font-bold mb-4">Sign in to get started</h3>
+                  <h3 className="text-xl font-bold mb-4">Ready to fix your PDFs?</h3>
                   <p className="text-gray-600 mb-6">
-                    Create a free account to process up to 10 pages per week
+                    Create a free account and start fixing up to 10 pages per week — no credit card required!
                   </p>
                   <Button asChild size="lg">
-                    <a href="/auth">Sign In / Sign Up</a>
+                    <a href="/auth">Get Started Free</a>
                   </Button>
                 </CardContent>
               </Card>
@@ -317,10 +325,10 @@ export default function HomePage() {
             <Card className="inline-block bg-gradient-to-r from-primary-500 to-primary-600 text-white border-0">
               <CardContent className="p-6">
                 <p className="font-medium">
-                  Free tier: 10 pages per week • 
+                  Free: 10 pages weekly • 
                   <Button variant="link" asChild className="text-white hover:text-primary-100 p-0 ml-2 font-semibold">
                     <a href="/pricing" className="inline-flex items-center">
-                      Upgrade to Pro
+                      Upgrade for unlimited processing
                       <ArrowRight className="h-4 w-4 ml-1" />
                     </a>
                   </Button>

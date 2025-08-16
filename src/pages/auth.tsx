@@ -54,23 +54,23 @@ export default function AuthPage() {
     } catch (error: any) {
       console.error('Auth error:', error);
       
-      // Handle specific error types
-      let errorMessage = error.message || 'Authentication failed';
+      // Handle specific error types with friendly messages
+      let errorMessage = error.message || 'Something went wrong. Please try again.';
       
       if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        errorMessage = 'Hmm, that email and password combination doesn\'t look right. Please double-check and try again.';
       } else if (error.message?.includes('Email not confirmed')) {
-        errorMessage = 'Please verify your email address before signing in.';
+        errorMessage = 'Please check your email and click the verification link before signing in.';
         // If we have the email, redirect to verification page
         setTimeout(() => {
           router.push('/auth/verify-email');
         }, 2000);
       } else if (error.message?.includes('Too many requests')) {
-        errorMessage = 'Too many login attempts. Please wait a few minutes before trying again.';
+        errorMessage = 'Whoa there! Too many attempts. Please take a short break and try again in a few minutes.';
       } else if (error.message?.includes('User already registered')) {
-        errorMessage = 'An account with this email already exists. Try signing in instead.';
+        errorMessage = 'Good news! You already have an account with this email. Try signing in instead.';
       } else if (error.message?.includes('Password should be at least')) {
-        errorMessage = 'Password must be at least 6 characters long.';
+        errorMessage = 'Your password needs to be at least 6 characters long for security.';
       }
       
       setMessage(errorMessage);
@@ -97,7 +97,7 @@ export default function AuthPage() {
       
       if (error) throw error;
       
-      setMessage('Password reset email sent! Please check your inbox.');
+      setMessage('Password reset email sent! Check your inbox (and spam folder just in case).');
       setMessageType('success');
       setShowPasswordReset(false);
     } catch (error: any) {
@@ -129,7 +129,7 @@ export default function AuthPage() {
       
       if (error) throw error;
       
-      setMessage('Magic link sent! Please check your email.');
+      setMessage('Magic link sent! Check your email for an instant sign-in link.');
       setMessageType('success');
     } catch (error: any) {
       console.error('Magic link error:', error);
