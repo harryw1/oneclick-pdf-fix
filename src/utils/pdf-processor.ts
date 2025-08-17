@@ -39,7 +39,7 @@ export async function processDocument(params: {
         Authorization: `Bearer ${userToken}`,
       },
     },
-  }) : createClient(supabaseUrl!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  }) : createClient(supabaseUrl!, process.env.SUPABASE_API_KEY!);
 
   // Get user profile
   let { data: profile } = await userSupabase

@@ -3,14 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 import { processDocument } from '@/utils/pdf-processor';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseApiKey = process.env.SUPABASE_API_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
+if (!supabaseUrl || !supabaseApiKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Use service role key for queue processing
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Use API key for queue processing
+const supabase = createClient(supabaseUrl, supabaseApiKey);
 
 export const config = {
   maxDuration: 120,
