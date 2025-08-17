@@ -228,7 +228,9 @@ export default async function handler(
               const topRight = vertices[1];
               
               if (topLeft.x !== undefined && topLeft.y !== undefined && 
-                  topRight.x !== undefined && topRight.y !== undefined) {
+                  topRight.x !== undefined && topRight.y !== undefined &&
+                  topLeft.x !== null && topLeft.y !== null &&
+                  topRight.x !== null && topRight.y !== null) {
                 const deltaX = topRight.x - topLeft.x;
                 const deltaY = topRight.y - topLeft.y;
                 const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
@@ -437,9 +439,9 @@ async function detectOptimalRotationWithVision(pdfBytes: Uint8Array, isPro: bool
         textAnnotations.slice(1, 20).forEach(annotation => {
           if (annotation.boundingPoly?.vertices) {
             const vertices = annotation.boundingPoly.vertices;
-            if (vertices.length >= 4) {
-              const width = Math.abs((vertices[1].x || 0) - (vertices[0].x || 0));
-              const height = Math.abs((vertices[3].y || 0) - (vertices[0].y || 0));
+            if (vertices.length >= 4 && vertices[0] && vertices[1] && vertices[3]) {
+              const width = Math.abs((vertices[1].x ?? 0) - (vertices[0].x ?? 0));
+              const height = Math.abs((vertices[3].y ?? 0) - (vertices[0].y ?? 0));
               totalTextArea += width * height;
             }
           }
