@@ -7,7 +7,7 @@ import { GetServerSideProps } from 'next';
 interface UserProfile {
   id: string;
   email: string;
-  plan: 'free' | 'pro';
+  plan: 'free' | 'pro_monthly' | 'pro_annual';
   usage_this_week: number;
   total_pages_processed: number;
 }

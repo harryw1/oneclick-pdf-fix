@@ -12,7 +12,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export interface User {
   id: string;
   email: string;
-  plan: 'free' | 'pro';
+  plan: 'free' | 'pro_monthly' | 'pro_annual';
   usage_this_week: number;
   created_at: string;
 }
