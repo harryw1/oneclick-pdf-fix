@@ -176,9 +176,13 @@ export default async function handler(
     for (let i = 0; i < Math.min(pages.length, 5); i++) { // Limit to first 5 pages for performance
       try {
         const pageImage = await convert(i + 1, { responseType: 'buffer' });
-        const rotation = await detectOptimalRotation(pageImage.buffer);
-        pageRotations.push(rotation);
-        console.log(`Page ${i + 1} optimal rotation: ${rotation}°`);
+        if (pageImage?.buffer) {
+          const rotation = await detectOptimalRotation(pageImage.buffer);
+          pageRotations.push(rotation);
+          console.log(`Page ${i + 1} optimal rotation: ${rotation}°`);
+        } else {
+          pageRotations.push(0);
+        }
       } catch (error) {
         console.warn(`Failed to detect rotation for page ${i + 1}:`, error);
         pageRotations.push(0);
@@ -201,6 +205,7 @@ export default async function handler(
       for (let i = 0; i < Math.min(pages.length, 3); i++) { // Limit for performance
         try {
           const pageImage = await convert(i + 1, { responseType: 'buffer' });
+          if (!pageImage?.buffer) continue;
           const skewAngle = await detectSkewAngle(pageImage.buffer);
           
           if (Math.abs(skewAngle) > 0.5) { // Only correct significant skew
@@ -225,6 +230,7 @@ export default async function handler(
         for (let i = 0; i < Math.min(pages.length, 3); i++) { // Limit for performance
           try {
             const pageImage = await convert(i + 1, { responseType: 'buffer' });
+            if (!pageImage?.buffer) continue;
             const { data: { text } } = await worker.recognize(pageImage.buffer);
             
             if (text.trim()) {
