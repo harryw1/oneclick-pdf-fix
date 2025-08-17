@@ -3,7 +3,6 @@ import { createClient } from '@/utils/supabase/client';
 import Layout from '@/components/Layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { 
   RotateCcw, 
   Minimize2, 
@@ -65,7 +64,7 @@ const benefits = [
 ];
 
 export default function HomePage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -178,7 +177,7 @@ export default function HomePage() {
                 'Rotated insurance forms',
                 'Skewed invoices',
                 'Oversized presentation slides'
-              ].map((useCase, index) => (
+              ].map((useCase) => (
                 <div key={useCase} className="flex items-center space-x-3">
                   <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
                   <span className="text-sm font-medium">{useCase}</span>

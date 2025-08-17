@@ -45,7 +45,7 @@ export async function processDocument(params: {
   }) : createClient(supabaseUrl!, process.env.SUPABASE_API_KEY!);
 
   // Get user profile
-  let { data: profile } = await userSupabase
+  const { data: profile } = await userSupabase
     .from('profiles')
     .select('*')
     .eq('id', userId)
@@ -321,7 +321,7 @@ async function detectOptimalRotationWithVision(pdfBytes: Uint8Array, isPro: bool
   }
 }
 
-function classifyDocument(text: string, webDetection: any): string {
+function classifyDocument(text: string, webDetection: unknown): string {
   if (!text) return 'Unknown';
   
   const textLower = text.toLowerCase();

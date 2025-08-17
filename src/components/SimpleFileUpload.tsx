@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, FileRejection } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -16,14 +16,14 @@ export default function SimpleFileUpload({ onFileSelect, userPlan = 'free', disa
   const maxFileSize = (userPlan === 'pro_monthly' || userPlan === 'pro_annual') ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
   const maxFileSizeMB = maxFileSize / (1024 * 1024);
 
-  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
+  const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: FileRejection[]) => {
     setError(null);
     
     if (rejectedFiles.length > 0) {
       const rejection = rejectedFiles[0];
-      if (rejection.errors.some((e: any) => e.code === 'file-too-large')) {
+      if (rejection.errors.some((e) => e.code === 'file-too-large')) {
         setError(`File too large. Maximum size is ${maxFileSizeMB}MB.`);
-      } else if (rejection.errors.some((e: any) => e.code === 'file-invalid-type')) {
+      } else if (rejection.errors.some((e) => e.code === 'file-invalid-type')) {
         setError('Only PDF files are supported.');
       } else {
         setError('File rejected. Please try again.');
@@ -36,7 +36,7 @@ export default function SimpleFileUpload({ onFileSelect, userPlan = 'free', disa
       setSelectedFile(file);
       onFileSelect(file);
     }
-  }, [onFileSelect, maxFileSize, maxFileSizeMB]);
+  }, [onFileSelect, maxFileSizeMB]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

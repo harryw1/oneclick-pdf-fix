@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import stripe, { createCheckoutSession, createCustomerPortalSession } from '@/utils/stripe';
+import { createCheckoutSession, createCustomerPortalSession } from '@/utils/stripe';
 import { createClient } from '@supabase/supabase-js';
 import { subscriptionRateLimit, checkRateLimit } from '@/utils/rate-limit';
 import { setSecurityHeaders } from '@/utils/security';

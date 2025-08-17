@@ -1,16 +1,15 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Zap, Sparkles, ArrowRight } from 'lucide-react';
+import { Check, Zap, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import Layout from '@/components/Layout';
-import Link from 'next/link';
 import { GetServerSideProps } from 'next';
 
 export default function PricingPage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
@@ -258,7 +257,7 @@ export default function PricingPage() {
                 <CardContent className="p-6">
                   <h4 className="font-semibold mb-2">Can I cancel anytime?</h4>
                   <p className="text-sm text-muted-foreground">
-                    Absolutely! Cancel your Pro subscription anytime. You'll retain Pro features until the end of your billing period.
+                    Absolutely! Cancel your Pro subscription anytime. You&apos;ll retain Pro features until the end of your billing period.
                   </p>
                 </CardContent>
               </Card>

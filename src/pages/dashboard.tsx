@@ -4,6 +4,8 @@ import { createClient } from '@/utils/supabase/client';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
 import { GetServerSideProps } from 'next';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 interface UserProfile {
   id: string;
@@ -22,7 +24,7 @@ interface DashboardProps {
 }
 
 export default function DashboardPage({ user, profile: initialProfile }: DashboardProps) {
-  const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
+  const [profile] = useState<UserProfile | null>(initialProfile);
   const [authToken, setAuthToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,15 +50,6 @@ export default function DashboardPage({ user, profile: initialProfile }: Dashboa
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleSignOut = async () => {
-    const supabase = createClient();
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Sign out error:', error);
-    } else {
-      window.location.href = '/';
-    }
-  };
 
   const handleManageSubscription = async () => {
     if (!authToken) return;
@@ -93,71 +86,84 @@ export default function DashboardPage({ user, profile: initialProfile }: Dashboa
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8 flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-              <p className="text-gray-600">Welcome back, {user.email}!</p>
+              <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
+              <p className="text-muted-foreground">Manage your PDF processing history</p>
             </div>
             <div className="flex items-center space-x-3">
               {profile?.plan === 'free' ? (
-                <Link href="/pricing" className="btn-primary">Upgrade to Pro</Link>
+                <Button asChild>
+                  <Link href="/pricing">Upgrade to Pro</Link>
+                </Button>
               ) : (
-                <button onClick={handleManageSubscription} className="btn-secondary">
+                <Button variant="outline" onClick={handleManageSubscription}>
                   Manage Subscription
-                </button>
+                </Button>
               )}
             </div>
           </div>
 
           {/* Usage Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <FileText className="h-8 w-8 text-primary-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Pages This Week</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {profile?.usage_this_week || 0} / {(profile?.plan === 'pro_monthly' || profile?.plan === 'pro_annual') ? '∞' : '5'}
-                    </p>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <FileText className="h-8 w-8 text-primary-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-muted-foreground">Pages This Week</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {profile?.usage_this_week || 0} / {(profile?.plan === 'pro_monthly' || profile?.plan === 'pro_annual') ? '∞' : '5'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
               
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <Calendar className="h-8 w-8 text-green-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Plan</p>
-                    <p className="text-2xl font-bold text-gray-900 capitalize">{profile?.plan || 'Free'}</p>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <Calendar className="h-8 w-8 text-green-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-muted-foreground">Plan</p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {profile?.plan === 'pro_monthly' ? 'Pro Monthly' : 
+                         profile?.plan === 'pro_annual' ? 'Pro Annual' : 'Free'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
               
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <Download className="h-8 w-8 text-blue-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">Total Processed</p>
-                    <p className="text-2xl font-bold text-gray-900">{profile?.total_pages_processed || 0}</p>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <Download className="h-8 w-8 text-blue-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-muted-foreground">Total Processed</p>
+                      <p className="text-2xl font-bold text-foreground">{profile?.total_pages_processed || 0}</p>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
 
           {/* Recent Files */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-medium text-gray-900">Recent Files</h2>
-            </div>
-            
-            <div className="p-6">
-              <div className="text-center text-gray-500 py-12">
-                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>No files processed yet</p>
-                <Link href="/upload" className="btn-primary mt-4 inline-block">
-                  Process Your First PDF
-                </Link>
+          <Card>
+            <CardContent className="p-0">
+              <div className="px-6 py-4 border-b">
+                <h2 className="text-lg font-medium text-foreground">Recent Files</h2>
               </div>
-            </div>
-          </div>
+              
+              <div className="p-6">
+                <div className="text-center text-muted-foreground py-12">
+                  <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="mb-4">No files processed yet</p>
+                  <Button asChild>
+                    <Link href="/upload">Process Your First PDF</Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
     </Layout>
   );
@@ -179,7 +185,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
           }));
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
+          cookiesToSet.forEach(({ name, value }) => {
             if (context.res) {
               context.res.setHeader('Set-Cookie', `${name}=${value}; Path=/; HttpOnly`);
             }

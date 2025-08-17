@@ -142,7 +142,7 @@ export default function AuthConfirmPage() {
           console.log('Attempting legacy OTP verification...');
           const { data, error } = await supabase.auth.verifyOtp({
             token_hash: token_hash as string,
-            type: type as any
+            type: type as 'signup' | 'recovery' | 'invite' | 'magiclink' | 'email_change' | 'sms' | 'phone_change'
           });
           
           if (error) {
@@ -176,10 +176,10 @@ export default function AuthConfirmPage() {
         setStatus('error');
         setMessage('Invalid confirmation link. Please request a new one.');
         
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Auth callback error:', error);
         setStatus('error');
-        setMessage(error.message || 'Authentication failed. Please try again.');
+        setMessage(error instanceof Error ? error.message : 'Authentication failed. Please try again.');
       }
     };
 

@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/client';
 
 export interface SessionInfo {
   isAuthenticated: boolean;
-  user: any;
+  user: { id: string; email: string } | null;
   expiresAt?: number;
   needsRefresh: boolean;
 }

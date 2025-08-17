@@ -24,7 +24,7 @@ interface ProcessedPDF {
   pageCount: number;
   fileSize: number;
   processedAt: Date;
-  options: any;
+  options: { ocr?: boolean; deskew?: boolean; [key: string]: unknown };
   documentType?: string;
 }
 

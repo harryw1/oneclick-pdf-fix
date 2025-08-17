@@ -62,8 +62,8 @@ export default function SessionManager({ children, requireAuth = false }: Sessio
     // Initial session check
     checkAndRefreshSession();
 
-    // Set up periodic session validation (every 30 seconds)
-    sessionCheckInterval = setInterval(async () => {
+    // Set up periodic session validation (every 30 seconds)  
+    const interval = setInterval(async () => {
       const sessionInfo = await getSessionInfo();
       if (sessionInfo.isAuthenticated !== isAuthenticated) {
         setIsAuthenticated(sessionInfo.isAuthenticated);
@@ -91,7 +91,7 @@ export default function SessionManager({ children, requireAuth = false }: Sessio
 
     return () => {
       if (refreshTimer) clearTimeout(refreshTimer);
-      if (sessionCheckInterval) clearInterval(sessionCheckInterval);
+      if (interval) clearInterval(interval);
       subscription.unsubscribe();
     };
   }, [requireAuth, router, isAuthenticated]);

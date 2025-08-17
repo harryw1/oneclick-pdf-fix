@@ -13,13 +13,13 @@ interface ProcessingStatus {
   status: 'uploading' | 'processing' | 'completed' | 'error';
   progress: number;
   message?: string;
-  result?: any;
+  result?: { downloadUrl: string; [key: string]: unknown };
   error?: string;
 }
 
 export default function ProcessingPage() {
   const [status, setStatus] = useState<ProcessingStatus>({ id: '', status: 'uploading', progress: 0 });
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [userPlan, setUserPlan] = useState<'free' | 'pro_monthly' | 'pro_annual'>('free');
   const router = useRouter();
   const { id } = router.query;
@@ -190,7 +190,7 @@ export default function ProcessingPage() {
               <p className="text-lg font-medium mb-2">{getStatusMessage()}</p>
               {status.status === 'processing' && (
                 <p className="text-sm text-muted-foreground">
-                  Please don't close this window. Processing typically takes 15-45 seconds.
+                  Please don&apos;t close this window. Processing typically takes 15-45 seconds.
                 </p>
               )}
               {status.status === 'completed' && (
@@ -225,7 +225,7 @@ export default function ProcessingPage() {
         {status.status === 'processing' && (
           <Card className="mt-8 bg-primary-50/50">
             <CardContent className="p-6">
-              <h3 className="font-semibold text-primary-800 mb-3">What we're doing:</h3>
+              <h3 className="font-semibold text-primary-800 mb-3">What we&apos;re doing:</h3>
               <ul className="space-y-2 text-sm text-primary-700">
                 <li>• Analyzing document orientation and text alignment</li>
                 <li>• Detecting and correcting skew or rotation issues</li>

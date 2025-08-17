@@ -17,12 +17,12 @@ interface ProcessingOptions {
 interface PDFProcessorProps {
   processingId: string;
   originalFile: File;
-  onProcessComplete: (result: any) => void;
+  onProcessComplete: (result: { downloadUrl: string; [key: string]: unknown }) => void;
   onError: (error: string) => void;
 }
 
 export default function PDFProcessor({ processingId, originalFile, onProcessComplete, onError }: PDFProcessorProps) {
-  const [options, setOptions] = useState<ProcessingOptions>({
+  const [options] = useState<ProcessingOptions>({
     rotate: 0,
     deskew: true,
     compress: true,

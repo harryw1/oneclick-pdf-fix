@@ -94,18 +94,14 @@ export default function AuthWrapper({ children, requireAuth = false }: AuthWrapp
           setMessage('Successfully signed in!');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Auth error:', error);
-      setMessage(error.message || 'Authentication failed');
+      setMessage(error instanceof Error ? error.message : 'Authentication failed');
     } finally {
       setAuthLoading(false);
     }
   };
 
-  const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-  };
 
   if (loading) {
     return (

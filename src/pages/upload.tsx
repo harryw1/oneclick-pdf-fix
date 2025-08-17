@@ -2,14 +2,13 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { createClient } from '@/utils/supabase/client';
 import Layout from '@/components/Layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import SimpleFileUpload from '@/components/SimpleFileUpload';
 import { ArrowLeft, Shield, Zap, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 export default function UploadPage() {
-  const [user, setUser] = useState<any>(null);
   const [userPlan, setUserPlan] = useState<'free' | 'pro_monthly' | 'pro_annual'>('free');
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -24,7 +23,6 @@ export default function UploadPage() {
         return;
       }
 
-      setUser(session.user);
       
       // Get user profile
       const { data: profile } = await supabase
@@ -108,7 +106,7 @@ export default function UploadPage() {
             Upload Your PDF
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Upload your document and we'll automatically fix rotation, remove skew, and optimize for clarity.
+            Upload your document and we&apos;ll automatically fix rotation, remove skew, and optimize for clarity.
           </p>
         </div>
 

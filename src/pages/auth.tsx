@@ -5,7 +5,7 @@ import { getAuthRedirectUrl } from '@/utils/config';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, LogIn, UserPlus, Mail, Key, Sparkles } from 'lucide-react';
+import { Loader2, LogIn, UserPlus, Mail, Key } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AuthPage() {
@@ -52,21 +52,21 @@ export default function AuthPage() {
           router.push('/dashboard');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Auth error:', error);
       
       // Handle specific error types with friendly messages
-      let errorMessage = error.message || 'Something went wrong. Please try again.';
+      let errorMessage = error instanceof Error ? error.message : 'Something went wrong. Please try again.';
       
-      if (error.message?.includes('Invalid login credentials')) {
+      if (error instanceof Error && error.message?.includes('Invalid login credentials')) {
         errorMessage = 'Hmm, that email and password combination doesn\'t look right. Please double-check and try again.';
-      } else if (error.message?.includes('Email not confirmed')) {
+      } else if (error instanceof Error && error.message?.includes('Email not confirmed')) {
         errorMessage = 'Please check your email and click the verification link before signing in.';
         // If we have the email, redirect to verification page
         setTimeout(() => {
           router.push('/auth/verify-email');
         }, 2000);
-      } else if (error.message?.includes('Too many requests')) {
+      } else if (error instanceof Error && error.message?.includes('Too many requests')) {
         errorMessage = 'Whoa there! Too many attempts. Please take a short break and try again in a few minutes.';
       } else if (error.message?.includes('User already registered')) {
         errorMessage = 'Good news! You already have an account with this email. Try signing in instead.';
@@ -101,9 +101,9 @@ export default function AuthPage() {
       setMessage('Password reset email sent! Check your inbox (and spam folder just in case).');
       setMessageType('success');
       setShowPasswordReset(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Password reset error:', error);
-      setMessage(error.message || 'Failed to send password reset email');
+      setMessage(error instanceof Error ? error.message : 'Failed to send password reset email');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -132,9 +132,9 @@ export default function AuthPage() {
       
       setMessage('Magic link sent! Check your email for an instant sign-in link.');
       setMessageType('success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Magic link error:', error);
-      setMessage(error.message || 'Failed to send magic link');
+      setMessage(error instanceof Error ? error.message : 'Failed to send magic link');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -161,9 +161,9 @@ export default function AuthPage() {
       
       setMessage('Confirmation email resent! Please check your inbox.');
       setMessageType('success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Resend confirmation error:', error);
-      setMessage(error.message || 'Failed to resend confirmation email');
+      setMessage(error instanceof Error ? error.message : 'Failed to resend confirmation email');
       setMessageType('error');
     } finally {
       setLoading(false);

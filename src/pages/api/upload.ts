@@ -92,25 +92,27 @@ export default async function handler(
       },
     });
 
-    let fields, files;
+    let files;
     try {
-      [fields, files] = await form.parse(req);
-    } catch (formError: any) {
+      const [, parsedFiles] = await form.parse(req);
+      files = parsedFiles;
+    } catch (formError: unknown) {
       console.error('Formidable parsing error:', formError);
-      console.error('Error code:', formError.code);
-      console.error('Error message:', formError.message);
-      console.error('Full error object:', JSON.stringify(formError, null, 2));
+      const errorCode = formError && typeof formError === 'object' && 'code' in formError ? formError.code : null;
+      const errorMessage = formError instanceof Error ? formError.message : String(formError);
+      console.error('Error code:', errorCode);
+      console.error('Error message:', errorMessage);
       
-      if (formError.code === 'LIMIT_FILE_SIZE' || 
-          formError.message?.includes('maxFileSize') || 
-          formError.message?.includes('too large')) {
+      if (errorCode === 'LIMIT_FILE_SIZE' || 
+          errorMessage?.includes('maxFileSize') || 
+          errorMessage?.includes('too large')) {
         return res.status(413).json({ 
           error: 'File too large',
           message: `File size exceeds ${(userPlan === 'pro_monthly' || userPlan === 'pro_annual') ? '100MB' : '10MB'} limit. ${userPlan === 'free' ? 'Upgrade to Pro for 100MB files.' : ''}`,
           userPlan,
           maxFileSizeMB: maxFileSize / (1024 * 1024),
-          actualErrorCode: formError.code,
-          actualErrorMessage: formError.message
+          actualErrorCode: errorCode,
+          actualErrorMessage: errorMessage
         });
       }
       throw formError;

@@ -46,9 +46,9 @@ export default function UpdatePasswordPage() {
         router.push('/dashboard');
       }, 2000);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Password update error:', error);
-      setMessage(error.message || 'Failed to update password');
+      setMessage(error instanceof Error ? error.message : 'Failed to update password');
     } finally {
       setLoading(false);
     }

@@ -12,7 +12,7 @@ export default function VerifyEmailPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [checkingVerification, setCheckingVerification] = useState(false);
   const router = useRouter();
 
@@ -60,9 +60,9 @@ export default function VerifyEmailPage() {
       
       setMessage('Verification email sent! Please check your inbox and spam folder.');
       setMessageType('success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Resend verification error:', error);
-      setMessage(error.message || 'Failed to resend verification email');
+      setMessage(error instanceof Error ? error.message : 'Failed to resend verification email');
       setMessageType('error');
     } finally {
       setLoading(false);
@@ -86,7 +86,7 @@ export default function VerifyEmailPage() {
         setMessage('Email not yet verified. Please check your inbox and click the verification link.');
         setMessageType('info');
       }
-    } catch (error) {
+    } catch (_error) {
       setMessage('Error checking verification status. Please try again.');
       setMessageType('error');
     } finally {
@@ -121,7 +121,7 @@ export default function VerifyEmailPage() {
           <CardContent className="text-center space-y-6">
             <div>
               <p className="text-gray-600 mb-2">
-                We've sent a verification email to:
+                We&apos;ve sent a verification email to:
               </p>
               <p className="font-semibold text-gray-900">
                 {user.email}

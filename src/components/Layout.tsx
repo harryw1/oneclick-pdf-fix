@@ -19,17 +19,17 @@ export default function Layout({
   description = 'Transform mis-scanned PDFs into perfectly readable documents',
   showAuth = true 
 }: LayoutProps) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
     if (showAuth) {
       supabase.auth.getSession().then(({ data: { session } }) => {
-        setUser(session?.user || null);
+        setUser(session?.user ? { id: session.user.id, email: session.user.email || '' } : null);
       });
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        setUser(session?.user || null);
+        setUser(session?.user ? { id: session.user.id, email: session.user.email || '' } : null);
       });
 
       return () => subscription.unsubscribe();
