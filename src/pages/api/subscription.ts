@@ -29,15 +29,43 @@ export default async function handler(
     return res.status(401).json({ error: 'Invalid authentication' });
   }
 
-  // Get user profile
-  const { data: profile, error: profileError } = await supabase
+  // Get user profile with authenticated client
+  const userSupabase = createClient(supabaseUrl!, supabaseAnonKey!, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  });
+
+  let { data: profile, error: profileError } = await userSupabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single();
 
+  // Create profile if it doesn't exist (like in process.ts)
   if (profileError || !profile) {
-    return res.status(404).json({ error: 'User profile not found' });
+    console.log('Profile not found for user:', user.id, 'Creating new profile...');
+    
+    const { data: newProfile, error: createError } = await userSupabase
+      .from('profiles')
+      .insert({
+        id: user.id,
+        email: user.email!,
+        plan: 'free',
+        usage_this_week: 0,
+        total_pages_processed: 0
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('Failed to create profile:', createError);
+      return res.status(500).json({ error: 'Failed to create user profile' });
+    }
+    
+    profile = newProfile;
   }
 
   if (req.method === 'POST') {
