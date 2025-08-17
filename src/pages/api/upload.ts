@@ -68,7 +68,7 @@ export default async function handler(
   try {
     // Set maxFileSize based on user tier - default to free if profile not found
     const userPlan = profile?.plan || 'free';
-    const maxFileSize = userPlan === 'pro' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+    const maxFileSize = (userPlan === 'pro_monthly' || userPlan === 'pro_annual') ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
     
     console.log('User plan:', userPlan, 'Max file size (bytes):', maxFileSize, 'Max file size (MB):', maxFileSize / (1024 * 1024));
     
@@ -106,7 +106,7 @@ export default async function handler(
           formError.message?.includes('too large')) {
         return res.status(413).json({ 
           error: 'File too large',
-          message: `File size exceeds ${userPlan === 'pro' ? '100MB' : '10MB'} limit. ${userPlan === 'free' ? 'Upgrade to Pro for 100MB files.' : ''}`,
+          message: `File size exceeds ${(userPlan === 'pro_monthly' || userPlan === 'pro_annual') ? '100MB' : '10MB'} limit. ${userPlan === 'free' ? 'Upgrade to Pro for 100MB files.' : ''}`,
           userPlan,
           maxFileSizeMB: maxFileSize / (1024 * 1024),
           actualErrorCode: formError.code,

@@ -56,7 +56,7 @@ export default async function handler(
           .single();
 
         const actualUserPlan = profile?.plan || 'free';
-        const maxFileSize = actualUserPlan === 'pro' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+        const maxFileSize = (actualUserPlan === 'pro_monthly' || actualUserPlan === 'pro_annual') ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
 
         return {
           allowedContentTypes: ['application/pdf'],
