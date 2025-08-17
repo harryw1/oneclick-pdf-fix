@@ -148,7 +148,6 @@ export default function HomePage() {
       
       console.log('Blob upload successful:', {
         url: blob.url,
-        size: blob.size,
         pathname: blob.pathname
       });
       
