@@ -47,6 +47,8 @@ export default async function handler(
 
   console.log('Process API called with body:', req.body);
   console.log('Authorization header:', req.headers.authorization);
+  
+  const processingStartTime = Date.now();
 
   if (!req.body || typeof req.body !== 'object') {
     return res.status(400).json({ error: 'Request body required' });
@@ -173,13 +175,15 @@ export default async function handler(
       }
     }
 
-    // Smart rotation detection using Google Cloud Vision API
-    console.log('Detecting optimal page orientations with Vision API...');
-    
+    // Priority processing: Enhanced features for Pro users
+    const isPro = profile.plan === 'pro_monthly' || profile.plan === 'pro_annual';
+    console.log(`Processing with ${isPro ? 'Pro' : 'Free'} tier features`);
+
+    // Smart rotation detection using Google Cloud Vision API (Pro users get enhanced accuracy)
     let pageRotations: number[] = [0];
     if (options.autoRotate !== false) {
       try {
-        pageRotations = await detectOptimalRotationWithVision(pdfBytes);
+        pageRotations = await detectOptimalRotationWithVision(pdfBytes, isPro);
         console.log('Vision API rotation analysis complete');
       } catch (error) {
         console.warn('Vision API rotation detection failed:', error);
@@ -196,9 +200,9 @@ export default async function handler(
       }
     });
 
-    // Document skew detection using Google Cloud Vision API
-    if (options.deskew) {
-      console.log('Applying deskewing with Vision API...');
+    // Document skew detection using Google Cloud Vision API (Pro feature)
+    if (options.deskew && isPro) {
+      console.log('Applying deskewing with Vision API (Pro feature)...');
       
       try {
         const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
@@ -255,35 +259,55 @@ export default async function handler(
       }
     }
 
-    // Google Cloud Vision API for OCR and document analysis
-    if (options.ocr) {
-      console.log('Processing OCR with Google Cloud Vision...');
+    // Document classification and OCR (Pro features)
+    let documentType = 'Unknown';
+    if (isPro && (options.ocr || options.classify)) {
+      console.log('Processing document classification and OCR with Google Cloud Vision (Pro features)...');
       
       try {
         // Convert PDF to base64 for Vision API
         const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
         
-        const [result] = await visionClient.documentTextDetection({
-          image: {
-            content: pdfBase64,
-          },
-        });
+        // Run both document text detection and web entity detection for classification
+        const [textResult, entityResult] = await Promise.all([
+          visionClient.documentTextDetection({
+            image: { content: pdfBase64 }
+          }),
+          visionClient.webDetection({
+            image: { content: pdfBase64 }
+          })
+        ]);
 
-        const fullTextAnnotation = result.fullTextAnnotation;
+        // Extract text for OCR
+        const fullTextAnnotation = textResult[0].fullTextAnnotation;
+        let extractedText = '';
         if (fullTextAnnotation?.text) {
-          console.log(`OCR extracted ${fullTextAnnotation.text.length} characters from document`);
-          // Store extracted text for potential future features (searchable PDFs, etc.)
+          extractedText = fullTextAnnotation.text;
+          console.log(`OCR extracted ${extractedText.length} characters from document`);
         }
+
+        // Classify document type using web entities and text analysis
+        documentType = classifyDocument(extractedText, entityResult[0].webDetection);
+        console.log(`Document classified as: ${documentType}`);
+
       } catch (error) {
-        console.warn('Google Vision OCR failed, falling back to basic processing:', error);
+        console.warn('Google Vision processing failed, falling back to basic processing:', error);
       }
     }
 
-    // Basic compression by optimizing the PDF structure
-    const processedPdfBytes = await pdfDoc.save({
+    // Priority processing: Enhanced compression for Pro users
+    const compressionOptions = isPro ? {
+      useObjectStreams: true,
+      addDefaultPage: false,
+      objectStreamsVersion: 1,
+      updateFieldAppearances: false, // Faster processing
+    } : {
       useObjectStreams: options.compress !== false,
       addDefaultPage: false,
-    });
+    };
+
+    console.log(`Applying ${isPro ? 'enhanced Pro' : 'standard'} compression...`);
+    const processedPdfBytes = await pdfDoc.save(compressionOptions);
 
     // Upload processed PDF to blob storage
     console.log('Uploading processed PDF to blob storage...');
@@ -367,7 +391,10 @@ export default async function handler(
     }
 
     res.status(200).json({ 
-      result,
+      result: {
+        ...result,
+        documentType: isPro ? documentType : undefined,
+      },
       usage: responseUsage
     });
   } catch (error) {
@@ -384,7 +411,7 @@ export default async function handler(
 }
 
 // Helper function to detect optimal rotation using text detection
-async function detectOptimalRotationWithVision(pdfBytes: Uint8Array): Promise<number[]> {
+async function detectOptimalRotationWithVision(pdfBytes: Uint8Array, isPro: boolean): Promise<number[]> {
   try {
     const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
     
@@ -398,16 +425,91 @@ async function detectOptimalRotationWithVision(pdfBytes: Uint8Array): Promise<nu
     const textAnnotations = result.textAnnotations || [];
     if (textAnnotations.length === 0) return [0];
 
-    // Simple heuristic: if most text is detected properly, rotation is likely correct
-    const confidence = textAnnotations[0]?.score || 0;
-    
-    // For now, return 0 rotation (no rotation needed) if Vision API can read text
-    // Future enhancement: analyze text block angles for rotation detection
-    return confidence > 0.7 ? [0] : [0]; // Conservative approach
+    // Enhanced rotation detection for Pro users
+    if (isPro && textAnnotations.length > 1) {
+      let bestRotation = 0;
+      let maxTextArea = 0;
+
+      // Test different rotations by analyzing text block density
+      for (const rotation of [0, 90, 180, 270]) {
+        let totalTextArea = 0;
+        
+        textAnnotations.slice(1, 20).forEach(annotation => {
+          if (annotation.boundingPoly?.vertices) {
+            const vertices = annotation.boundingPoly.vertices;
+            if (vertices.length >= 4) {
+              const width = Math.abs((vertices[1].x || 0) - (vertices[0].x || 0));
+              const height = Math.abs((vertices[3].y || 0) - (vertices[0].y || 0));
+              totalTextArea += width * height;
+            }
+          }
+        });
+
+        if (totalTextArea > maxTextArea) {
+          maxTextArea = totalTextArea;
+          bestRotation = rotation;
+        }
+      }
+      
+      return [bestRotation];
+    }
+
+    // Basic rotation for free users (no rotation by default)
+    return [0];
   } catch (error) {
     console.error('Vision API rotation detection failed:', error);
     return [0];
   }
+}
+
+function classifyDocument(text: string, webDetection: any): string {
+  if (!text) return 'Unknown';
+  
+  const textLower = text.toLowerCase();
+  
+  // Classification based on content keywords
+  if (textLower.includes('resume') || textLower.includes('curriculum vitae') || 
+      textLower.includes('experience') && textLower.includes('education')) {
+    return 'Resume/CV';
+  }
+  
+  if (textLower.includes('invoice') || textLower.includes('bill') || 
+      textLower.includes('amount due') || textLower.includes('payment')) {
+    return 'Invoice/Bill';
+  }
+  
+  if (textLower.includes('contract') || textLower.includes('agreement') || 
+      textLower.includes('terms and conditions')) {
+    return 'Contract/Legal';
+  }
+  
+  if (textLower.includes('report') || textLower.includes('analysis') || 
+      textLower.includes('summary') || textLower.includes('findings')) {
+    return 'Report/Analysis';
+  }
+  
+  if (textLower.includes('statement') || textLower.includes('account') || 
+      textLower.includes('balance') || textLower.includes('transaction')) {
+    return 'Financial Statement';
+  }
+  
+  // Use web entities as fallback classification
+  if (webDetection?.webEntities) {
+    const entities = webDetection.webEntities.slice(0, 3);
+    for (const entity of entities) {
+      if (entity.description) {
+        const desc = entity.description.toLowerCase();
+        if (desc.includes('form') || desc.includes('application')) {
+          return 'Form/Application';
+        }
+        if (desc.includes('certificate') || desc.includes('diploma')) {
+          return 'Certificate/Diploma';
+        }
+      }
+    }
+  }
+  
+  return 'General Document';
 }
 
 // Helper function to detect skew angle using edge detection

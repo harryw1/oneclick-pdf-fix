@@ -177,7 +177,8 @@ export default function HomePage() {
           rotate: 0,
           deskew: true,
           compress: true,
-          ocr: true
+          ocr: userPlan === 'pro_monthly' || userPlan === 'pro_annual',
+          classify: userPlan === 'pro_monthly' || userPlan === 'pro_annual'
         }
       };
       console.log('Process request payload:', processPayload);

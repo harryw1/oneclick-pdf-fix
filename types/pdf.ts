@@ -3,6 +3,8 @@ export interface PDFProcessingOptions {
   deskew?: boolean;
   compress?: boolean;
   ocr?: boolean;
+  classify?: boolean;
+  autoRotate?: boolean;
 }
 
 export interface ProcessedPDF {
@@ -14,6 +16,7 @@ export interface ProcessedPDF {
   fileSize: number;
   processedAt: Date;
   options: PDFProcessingOptions;
+  documentType?: string;
 }
 
 export interface ProcessingStatus {

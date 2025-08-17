@@ -23,9 +23,9 @@ export const PLANS = {
     features: [
       '100 pages per month',
       'Advanced OCR & deskewing',
+      'Document classification',
       '100MB file uploads',
-      'Priority processing',
-      'API access'
+      'Priority processing'
     ]
   },
   pro_annual: {
@@ -38,9 +38,9 @@ export const PLANS = {
     features: [
       '100 pages per month',
       'Advanced OCR & deskewing',
+      'Document classification',
       '100MB file uploads',
       'Priority processing',
-      'API access',
       '2 months free (16% discount)'
     ]
   }

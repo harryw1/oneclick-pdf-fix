@@ -113,10 +113,9 @@ export default function PricingPage() {
         features: [
           '100 pages per month',
           'Advanced OCR & deskewing',
+          'Document classification',
           '100MB file uploads',
-          'Priority processing',
-          'API access',
-          'Priority support'
+          'Priority processing'
         ],
         cta: billingCycle === 'monthly' ? 'Start Monthly Plan' : 'Start Annual Plan',
         popular: true,
