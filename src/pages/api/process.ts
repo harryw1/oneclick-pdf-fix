@@ -38,6 +38,10 @@ export default async function handler(
   console.log('Process API called with body:', req.body);
   console.log('Authorization header:', req.headers.authorization);
 
+  if (!req.body || typeof req.body !== 'object') {
+    return res.status(400).json({ error: 'Request body required' });
+  }
+
   const { processingId, blobUrl, originalFileName, options = {} } = req.body as {
     processingId: string;
     blobUrl: string;
