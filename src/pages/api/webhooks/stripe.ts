@@ -57,20 +57,21 @@ export default async function handler(
         
         if (session.mode === 'subscription') {
           const userId = session.metadata?.userId;
+          const planType = session.metadata?.planType || 'pro_monthly';
           
           if (userId) {
-            // Update user to pro plan
+            // Update user to appropriate pro plan
             await supabase
               .from('profiles')
               .update({
-                plan: 'pro',
+                plan: planType,
                 stripe_customer_id: session.customer as string,
                 stripe_subscription_id: session.subscription as string,
                 updated_at: new Date().toISOString()
               })
               .eq('id', userId);
 
-            console.log(`User ${userId} upgraded to Pro plan`);
+            console.log(`User ${userId} upgraded to ${planType} plan`);
           }
         }
         break;
@@ -80,14 +81,8 @@ export default async function handler(
         const subscription = event.data.object as Stripe.Subscription;
         
         if (subscription.status === 'active') {
-          // Ensure user is on pro plan
-          await supabase
-            .from('profiles')
-            .update({
-              plan: 'pro',
-              updated_at: new Date().toISOString()
-            })
-            .eq('stripe_subscription_id', subscription.id);
+          // Keep existing pro plan type, just ensure it's active
+          console.log(`Subscription ${subscription.id} is active`);
         } else if (['canceled', 'unpaid', 'past_due'].includes(subscription.status)) {
           // Downgrade to free plan
           await supabase
