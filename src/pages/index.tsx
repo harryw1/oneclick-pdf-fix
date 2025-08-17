@@ -18,7 +18,7 @@ export default function HomePage() {
   const [result, setResult] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
-  const [userPlan, setUserPlan] = useState<'free' | 'pro'>('free');
+  const [userPlan, setUserPlan] = useState<'free' | 'pro_monthly' | 'pro_annual'>('free');
 
   useEffect(() => {
     // Check if this is an auth callback that should go to /auth/confirm
