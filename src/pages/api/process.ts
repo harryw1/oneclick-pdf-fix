@@ -178,7 +178,7 @@ export default async function handler(
 
     // Upload processed PDF to blob storage
     console.log('Uploading processed PDF to blob storage...');
-    const processedBlob = await put(`processed-${processingId}.pdf`, processedPdfBytes, {
+    const processedBlob = await put(`processed-${processingId}.pdf`, Buffer.from(processedPdfBytes), {
       access: 'public',
       addRandomSuffix: false
     });
