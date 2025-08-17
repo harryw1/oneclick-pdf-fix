@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import stripe, { createCheckoutSession, createCustomerPortalSession } from '@/utils/stripe';
 import { createClient } from '@supabase/supabase-js';
+import { subscriptionRateLimit, checkRateLimit } from '@/utils/rate-limit';
+import { setSecurityHeaders } from '@/utils/security';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -15,7 +17,26 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  console.log('Subscription API called:', req.method, req.url);
+  // SECURITY: Set security headers and CORS
+  setSecurityHeaders(res, req.headers.origin as string);
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  // SECURITY: Rate limiting
+  const clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress || 'unknown';
+  const identifier = Array.isArray(clientIP) ? clientIP[0] : clientIP;
+  
+  const rateLimitResult = await checkRateLimit(subscriptionRateLimit, identifier, 3, 60000);
+  
+  if (!rateLimitResult.success) {
+    return res.status(429).json({ 
+      error: 'Rate limit exceeded', 
+      message: 'Too many subscription requests. Please try again later.',
+      resetTime: rateLimitResult.reset
+    });
+  }
   // Get current user from auth token
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -74,7 +95,7 @@ export default async function handler(
 
       if (action === 'create_checkout') {
         const { planType } = req.body;
-        console.log('Checkout request:', { userId: user.id, email: user.email, planType, body: req.body });
+        console.log('Checkout request:', { userId: user.id, planType });
         
         if (!planType || !['pro_monthly', 'pro_annual'].includes(planType)) {
           console.error('Invalid plan type:', planType);
@@ -98,8 +119,13 @@ export default async function handler(
         res.status(400).json({ error: 'Invalid action' });
       }
     } catch (error) {
-      console.error('Stripe error:', error);
-      res.status(500).json({ error: 'Failed to process request' });
+      // SECURITY: Log detailed errors server-side, return generic message to client
+      console.error('[SUBSCRIPTION ERROR]', {
+        userId: user?.id,
+        action: req.body?.action,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      res.status(500).json({ error: 'Request processing failed' });
     }
   } else if (req.method === 'GET') {
     // Get subscription status

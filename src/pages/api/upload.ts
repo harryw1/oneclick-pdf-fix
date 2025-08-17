@@ -3,6 +3,7 @@ import formidable from 'formidable';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
+import { setSecurityHeaders } from '@/utils/security';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -23,6 +24,13 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // SECURITY: Set security headers and CORS
+  setSecurityHeaders(res, req.headers.origin as string);
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -68,7 +76,20 @@ export default async function handler(
       uploadDir: '/tmp',
       keepExtensions: true,
       maxFileSize: maxFileSize,
-      filter: ({ mimetype }) => mimetype === 'application/pdf',
+      filter: ({ mimetype, originalFilename }) => {
+        // SECURITY: Enhanced file validation
+        if (mimetype !== 'application/pdf') return false;
+        if (!originalFilename) return false;
+        
+        // Check file extension
+        const ext = path.extname(originalFilename).toLowerCase();
+        if (ext !== '.pdf') return false;
+        
+        // Check for dangerous characters in filename
+        if (/[<>:"/\|?*\x00-\x1f]/.test(originalFilename)) return false;
+        
+        return true;
+      },
     });
 
     let fields, files;

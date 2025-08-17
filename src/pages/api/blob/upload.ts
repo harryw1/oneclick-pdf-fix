@@ -1,6 +1,7 @@
 import { handleUpload } from '@vercel/blob/client';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
+import { uploadRateLimit, checkRateLimit } from '@/utils/rate-limit';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -16,6 +17,19 @@ export default async function handler(
   res: NextApiResponse
 ) {
   try {
+    // SECURITY: Rate limiting
+    const clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress || 'unknown';
+    const identifier = Array.isArray(clientIP) ? clientIP[0] : clientIP;
+    
+    const rateLimitResult = await checkRateLimit(uploadRateLimit, identifier, 10, 60000);
+    
+    if (!rateLimitResult.success) {
+      return res.status(429).json({ 
+        error: 'Rate limit exceeded', 
+        message: 'Too many upload requests. Please try again later.',
+        resetTime: rateLimitResult.reset
+      });
+    }
     const jsonResponse = await handleUpload({
       body: req.body,
       request: req,

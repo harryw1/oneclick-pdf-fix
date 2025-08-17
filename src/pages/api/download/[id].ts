@@ -1,25 +1,43 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { setSecurityHeaders, validateProcessingId } from '@/utils/security';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // SECURITY: Set security headers
+  setSecurityHeaders(res, req.headers.origin as string);
+  
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { id } = req.query;
   
-  console.log('Download request for ID:', id);
-  
   if (!id || typeof id !== 'string') {
     return res.status(400).json({ error: 'Invalid processing ID' });
   }
 
+  // SECURITY: Validate processing ID format to prevent path traversal
+  if (!validateProcessingId(id)) {
+    console.warn('Invalid processing ID format attempted:', id);
+    return res.status(400).json({ error: 'Invalid processing ID format' });
+  }
+
+  // SECURITY: Sanitize the ID and construct safe file path
+  const sanitizedId = id.replace(/[^a-zA-Z0-9_]/g, '');
+  const filePath = path.join('/tmp', `${sanitizedId}_processed.pdf`);
+  
+  // SECURITY: Ensure file path is within expected directory
+  const resolvedPath = path.resolve(filePath);
+  if (!resolvedPath.startsWith('/tmp/')) {
+    console.warn('Path traversal attempt detected:', filePath);
+    return res.status(400).json({ error: 'Invalid file path' });
+  }
+
   try {
-    const filePath = `/tmp/${id}_processed.pdf`;
     console.log('Looking for file at:', filePath);
     
     // Check if file exists
@@ -65,11 +83,17 @@ export default async function handler(
   } catch (error) {
     console.error('Download error:', error);
     
-    // Ensure we always send valid response
+    // SECURITY: Log detailed errors server-side, return generic message to client
+    console.error('[DOWNLOAD ERROR]', {
+      processingId: id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
     if (!res.headersSent) {
       res.status(500).json({ 
-        error: 'Failed to download file',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Download failed',
+        message: 'Unable to download file. Please try again or contact support.'
       });
     }
   }

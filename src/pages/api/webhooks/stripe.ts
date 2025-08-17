@@ -7,13 +7,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseApiKey = process.env.SUPABASE_API_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
+if (!supabaseUrl || !supabaseApiKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabase = createClient(supabaseUrl, supabaseApiKey);
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -31,21 +31,37 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const buf = JSON.stringify(req.body);
-  const sig = req.headers['stripe-signature']!;
+  // SECURITY: Always verify webhook signatures - never bypass in any environment
+  const sig = req.headers['stripe-signature'];
+  
+  if (!sig) {
+    console.error('Missing Stripe signature header');
+    return res.status(400).json({ error: 'Missing webhook signature' });
+  }
+
+  if (!endpointSecret) {
+    console.error('Missing webhook endpoint secret');
+    return res.status(500).json({ error: 'Webhook configuration error' });
+  }
 
   let event: Stripe.Event;
+  let rawBody: string;
 
   try {
-    // For development, you can skip signature verification
-    if (process.env.NODE_ENV === 'development') {
-      event = req.body as Stripe.Event;
-    } else {
-      event = stripe.webhooks.constructEvent(buf, sig, endpointSecret);
-    }
+    // Get raw body for signature verification
+    const chunks: Buffer[] = [];
+    await new Promise((resolve, reject) => {
+      req.on('data', (chunk) => chunks.push(chunk));
+      req.on('end', resolve);
+      req.on('error', reject);
+    });
+    rawBody = Buffer.concat(chunks).toString();
+    
+    // SECURITY: Always verify webhook signature
+    event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
-    return res.status(400).json({ error: 'Webhook signature verification failed' });
+    return res.status(400).json({ error: 'Invalid webhook signature' });
   }
 
   console.log('Stripe webhook event:', event.type);

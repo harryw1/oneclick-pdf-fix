@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
 import { processDocument } from '@/utils/pdf-processor';
+import { processRateLimit, checkRateLimit } from '@/utils/rate-limit';
+import { setSecurityHeaders, validateProcessingId, sanitizeInput } from '@/utils/security';
 import type { PDFProcessingOptions } from '@/types/pdf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -26,11 +28,30 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  // SECURITY: Set security headers and CORS
+  setSecurityHeaders(res, req.headers.origin as string);
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  console.log('Process API called with body:', req.body);
+  // SECURITY: Rate limiting
+  const clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress || 'unknown';
+  const identifier = Array.isArray(clientIP) ? clientIP[0] : clientIP;
+  
+  const rateLimitResult = await checkRateLimit(processRateLimit, identifier, 5, 60000);
+  
+  if (!rateLimitResult.success) {
+    return res.status(429).json({ 
+      error: 'Rate limit exceeded', 
+      message: 'Too many processing requests. Please try again later.',
+      resetTime: rateLimitResult.reset
+    });
+  }
 
   if (!req.body || typeof req.body !== 'object') {
     return res.status(400).json({ error: 'Request body required' });
@@ -43,8 +64,22 @@ export default async function handler(
     options: PDFProcessingOptions;
   };
 
-  if (!processingId || !blobUrl) {
-    return res.status(400).json({ error: 'Processing ID and blob URL required' });
+  // SECURITY: Enhanced input validation
+  if (!processingId || !blobUrl || !originalFileName) {
+    return res.status(400).json({ error: 'Processing ID, blob URL, and filename required' });
+  }
+
+  if (!validateProcessingId(processingId)) {
+    return res.status(400).json({ error: 'Invalid processing ID format' });
+  }
+
+  if (!blobUrl.startsWith('https://')) {
+    return res.status(400).json({ error: 'Invalid blob URL - must use HTTPS' });
+  }
+
+  const sanitizedFileName = sanitizeInput(originalFileName);
+  if (sanitizedFileName !== originalFileName) {
+    console.warn('Filename contained potentially dangerous characters, sanitized');
   }
 
   // Get current user
@@ -247,12 +282,18 @@ export default async function handler(
     }
 
   } catch (error) {
-    console.error('Processing error:', error);
+    // SECURITY: Log detailed errors server-side, return generic message to client
+    console.error('[PROCESS ERROR]', {
+      processingId,
+      userId: user.id,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     
     if (!res.headersSent) {
       res.status(500).json({ 
-        error: 'Failed to process PDF',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Processing failed',
+        message: 'Unable to process PDF. Please try again or contact support.'
       });
     }
   }
