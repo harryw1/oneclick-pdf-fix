@@ -131,19 +131,28 @@ export default async function handler(
     const pages = pdfDoc.getPages();
     const pageCount = pages.length;
 
-    // Check usage limits for free users
+    // Check usage limits based on plan
     if (profile.plan === 'free') {
       const newUsage = profile.usage_this_week + pageCount;
       if (newUsage > 5) {
         return res.status(403).json({ 
           error: 'Weekly page limit exceeded', 
-          message: `You've reached your free tier limit of 5 pages per week. Upgrade to Pro for unlimited processing.`,
+          message: `You've reached your free tier limit of 5 pages per week. Upgrade to Pro for 100 pages/month + overages.`,
           currentUsage: profile.usage_this_week,
           pageLimit: 5,
           requestedPages: pageCount
         });
       }
-    }
+    } else if (profile.plan === 'pro_monthly' || profile.plan === 'pro_annual') {
+      // Pro users get 100 pages per month, then overage charges apply
+      const monthlyUsage = profile.usage_this_month || 0;
+      const newUsage = monthlyUsage + pageCount;
+      
+      if (newUsage > 100) {
+        const overagePages = newUsage - 100;
+        const overageCharge = overagePages * 0.10;
+        
+        console.log(`Pro user will incur overage: ${overagePages} pages × $0.10 = $${overageCharge.toFixed(2)}`);\n        // Note: Overage billing would be handled separately via Stripe\n        // For now, we allow the processing and track the overage\n      }\n    }
 
     // Smart rotation detection and correction
     console.log('Detecting optimal page orientations...');
@@ -258,16 +267,26 @@ export default async function handler(
 
     // Update user usage statistics using authenticated client
     const newUsageThisWeek = profile.usage_this_week + pageCount;
+    const newUsageThisMonth = (profile.usage_this_month || 0) + pageCount;
     const newTotalProcessed = profile.total_pages_processed + pageCount;
+
+    const updateData: any = {
+      total_pages_processed: newTotalProcessed,
+      last_processed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // Update weekly usage for free users
+    if (profile.plan === 'free') {
+      updateData.usage_this_week = newUsageThisWeek;
+    } else {
+      // Update monthly usage for Pro users
+      updateData.usage_this_month = newUsageThisMonth;
+    }
 
     const { error: updateError } = await userSupabase
       .from('profiles')
-      .update({
-        usage_this_week: newUsageThisWeek,
-        total_pages_processed: newTotalProcessed,
-        last_processed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', user.id);
 
     if (updateError) {
@@ -294,13 +313,27 @@ export default async function handler(
 
     // No need to clean up - files are in blob storage
 
+    const responseUsage: any = {
+      totalPagesProcessed: newTotalProcessed,
+      plan: profile.plan
+    };
+
+    if (profile.plan === 'free') {
+      responseUsage.pagesProcessedThisWeek = newUsageThisWeek;
+      responseUsage.weeklyLimit = 5;
+    } else {
+      responseUsage.pagesProcessedThisMonth = newUsageThisMonth;
+      responseUsage.monthlyLimit = 100;
+      responseUsage.overageRate = 0.10;
+      if (newUsageThisMonth > 100) {
+        responseUsage.overagePages = newUsageThisMonth - 100;
+        responseUsage.overageCharge = (newUsageThisMonth - 100) * 0.10;
+      }
+    }
+
     res.status(200).json({ 
       result,
-      usage: {
-        pagesProcessedThisWeek: newUsageThisWeek,
-        totalPagesProcessed: newTotalProcessed,
-        plan: profile.plan
-      }
+      usage: responseUsage
     });
   } catch (error) {
     console.error('Processing error:', error);

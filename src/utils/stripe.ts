@@ -10,31 +10,55 @@ export const PLANS = {
   free: {
     name: 'Free',
     price: 0,
-    pages_per_week: 10,
-    features: ['Basic PDF processing', 'Auto-rotation & compression', 'Instant download']
+    pages_per_week: 5,
+    max_file_size_mb: 10,
+    features: ['5 pages per week', 'Basic PDF processing', 'Auto-rotation & compression', 'Instant download']
   },
-  pro: {
-    name: 'Pro',
-    price: 4,
-    priceId: 'price_1RwlaQRVxTjhJx7K34kVkPf6',
-    pages_per_week: Infinity,
+  pro_monthly: {
+    name: 'Pro Monthly',
+    price: 9,
+    priceId: 'price_pro_monthly_9', // You'll need to create this in Stripe dashboard
+    pages_per_month: 100,
+    overage_price_per_page: 0.10,
+    max_file_size_mb: 100,
     features: [
-      'Unlimited pages',
-      'Advanced OCR & deskewing', 
-      '90-day document storage',
+      '100 pages per month included',
+      '$0.10 per additional page',
+      'Advanced OCR & deskewing',
+      '100MB file uploads',
       'Priority processing',
-      'Batch processing'
+      'API access'
+    ]
+  },
+  pro_annual: {
+    name: 'Pro Annual',
+    price: 90,
+    priceId: 'price_pro_annual_90', // You'll need to create this in Stripe dashboard
+    pages_per_month: 100,
+    overage_price_per_page: 0.10,
+    max_file_size_mb: 100,
+    discount_months: 2,
+    features: [
+      '100 pages per month included',
+      '$0.10 per additional page',
+      'Advanced OCR & deskewing',
+      '100MB file uploads',
+      'Priority processing',
+      'API access',
+      '2 months free (16% discount)'
     ]
   }
 };
 
-export async function createCheckoutSession(userId: string, email: string) {
+export async function createCheckoutSession(userId: string, email: string, planType: 'pro_monthly' | 'pro_annual') {
+  const plan = PLANS[planType];
+  
   const session = await stripe.checkout.sessions.create({
     customer_email: email,
     payment_method_types: ['card'],
     line_items: [
       {
-        price: PLANS.pro.priceId,
+        price: plan.priceId,
         quantity: 1,
       },
     ],
@@ -43,11 +67,43 @@ export async function createCheckoutSession(userId: string, email: string) {
     cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/pricing?canceled=true`,
     metadata: {
       userId,
+      planType,
     },
     allow_promotion_codes: true,
   });
 
   return session;
+}
+
+// Function to calculate and charge overage fees
+export async function calculateOverageCharge(userId: string, pagesUsed: number, plan: 'pro_monthly' | 'pro_annual'): Promise<number> {
+  const planConfig = PLANS[plan];
+  const overagePages = Math.max(0, pagesUsed - planConfig.pages_per_month);
+  const overageAmount = overagePages * planConfig.overage_price_per_page;
+  
+  if (overageAmount > 0) {
+    console.log(`User ${userId} has ${overagePages} overage pages, charging $${overageAmount.toFixed(2)}`);
+  }
+  
+  return overageAmount;
+}
+
+// Function to create one-time overage payment
+export async function createOveragePayment(customerId: string, overageAmount: number, overagePages: number) {
+  if (overageAmount <= 0) return null;
+  
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: Math.round(overageAmount * 100), // Convert to cents
+    currency: 'usd',
+    customer: customerId,
+    description: `Overage charge for ${overagePages} additional pages`,
+    metadata: {
+      type: 'overage',
+      pages: overagePages.toString(),
+    },
+  });
+  
+  return paymentIntent;
 }
 
 export async function createCustomerPortalSession(customerId: string) {

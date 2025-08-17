@@ -12,6 +12,7 @@ export default function PricingPage() {
   const [user, setUser] = useState<any>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
   useEffect(() => {
     const supabase = createClient();
@@ -41,7 +42,7 @@ export default function PricingPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = async (planType: 'pro_monthly' | 'pro_annual') => {
     if (!user || !authToken) {
       // Redirect to sign in
       window.location.href = '/auth';
@@ -57,7 +58,7 @@ export default function PricingPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
         },
-        body: JSON.stringify({ action: 'create_checkout' })
+        body: JSON.stringify({ action: 'create_checkout', planType })
       });
 
       const data = await response.json();
@@ -75,38 +76,53 @@ export default function PricingPage() {
     }
   };
 
-  const plans = [
-    {
-      name: 'Free',
-      price: 0,
-      description: 'Perfect for occasional use',
-      features: [
-        '10 pages per week',
-        'Basic PDF processing',
-        'Auto-rotation & compression',
-        'Instant download',
-        'Email support'
-      ],
-      cta: 'Get Started Free',
-      popular: false
-    },
-    {
-      name: 'Pro',
-      price: 4,
-      description: 'For power users and professionals',
-      features: [
-        'Unlimited pages',
-        'Advanced OCR & deskewing',
-        '90-day document storage',
-        'Priority processing',
-        'Batch processing',
-        'API access',
-        'Priority support'
-      ],
-      cta: 'Upgrade to Pro',
-      popular: true
-    }
-  ];
+  const getPlans = () => {
+    const monthlyPrice = 9;
+    const annualPrice = 90;
+    const monthlyEquivalent = annualPrice / 12;
+    const savings = ((monthlyPrice - monthlyEquivalent) / monthlyPrice * 100).toFixed(0);
+    
+    return [
+      {
+        name: 'Free',
+        price: 0,
+        billing: 'forever',
+        description: 'Perfect for occasional use',
+        features: [
+          '5 pages per week',
+          'Basic PDF processing',
+          'Auto-rotation & compression',
+          '10MB file uploads',
+          'Instant download'
+        ],
+        cta: 'Get Started Free',
+        popular: false,
+        planType: null
+      },
+      {
+        name: 'Pro',
+        price: billingCycle === 'monthly' ? monthlyPrice : monthlyEquivalent,
+        originalPrice: billingCycle === 'annual' ? monthlyPrice : null,
+        billing: billingCycle === 'monthly' ? 'per month' : 'per month (billed annually)',
+        savings: billingCycle === 'annual' ? `Save ${savings}%` : null,
+        description: 'For power users and professionals',
+        features: [
+          '100 pages per month included',
+          '$0.10 per additional page',
+          'Advanced OCR & deskewing',
+          '100MB file uploads',
+          'Priority processing',
+          'API access',
+          'Priority support'
+        ],
+        cta: billingCycle === 'monthly' ? 'Start Monthly Plan' : 'Start Annual Plan',
+        popular: true,
+        planType: billingCycle === 'monthly' ? 'pro_monthly' : 'pro_annual'
+      }
+    ];
+  };
+  
+  const plans = getPlans();
 
   return (
     <>
@@ -143,6 +159,31 @@ export default function PricingPage() {
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Start free, upgrade when you need more. No hidden fees, cancel anytime.
             </p>
+            
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center mt-8 mb-8">
+              <div className="bg-gray-100 p-1 rounded-lg">
+                <button
+                  onClick={() => setBillingCycle('monthly')}
+                  className={cn(
+                    "px-4 py-2 rounded-md text-sm font-medium transition-all",
+                    billingCycle === 'monthly' ? "bg-white shadow-sm text-gray-900" : "text-gray-600 hover:text-gray-900"
+                  )}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setBillingCycle('annual')}
+                  className={cn(
+                    "px-4 py-2 rounded-md text-sm font-medium transition-all relative",
+                    billingCycle === 'annual' ? "bg-white shadow-sm text-gray-900" : "text-gray-600 hover:text-gray-900"
+                  )}
+                >
+                  Annual
+                  <Badge className="absolute -top-2 -right-2 bg-green-500 text-white text-xs">Save 16%</Badge>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -166,8 +207,18 @@ export default function PricingPage() {
                 )}>
                   <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
                   <div className="mt-4">
+                    {plan.originalPrice && (
+                      <div className="text-lg text-muted-foreground line-through mb-1">
+                        ${plan.originalPrice}/month
+                      </div>
+                    )}
                     <span className="text-5xl font-bold">${plan.price}</span>
-                    <span className="text-muted-foreground ml-1">/month</span>
+                    <span className="text-muted-foreground ml-1">/{plan.billing}</span>
+                    {plan.savings && (
+                      <div className="text-green-600 font-semibold text-sm mt-1">
+                        {plan.savings}
+                      </div>
+                    )}
                   </div>
                   <p className="text-muted-foreground mt-2">{plan.description}</p>
                 </CardHeader>
@@ -185,7 +236,13 @@ export default function PricingPage() {
                   </ul>
                   
                   <Button 
-                    onClick={plan.popular ? handleUpgrade : () => window.location.href = user ? '/dashboard' : '/auth'}
+                    onClick={() => {
+                      if (plan.planType) {
+                        handleUpgrade(plan.planType as 'pro_monthly' | 'pro_annual');
+                      } else {
+                        window.location.href = user ? '/dashboard' : '/auth';
+                      }
+                    }}
                     disabled={loading}
                     className={cn(
                       "w-full h-12 text-base font-semibold transition-all duration-200",

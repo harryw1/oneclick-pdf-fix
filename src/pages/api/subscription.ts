@@ -44,8 +44,13 @@ export default async function handler(
       const { action } = req.body;
 
       if (action === 'create_checkout') {
+        const { planType } = req.body;
+        if (!planType || !['pro_monthly', 'pro_annual'].includes(planType)) {
+          return res.status(400).json({ error: 'Valid plan type required' });
+        }
+        
         // Create Stripe checkout session
-        const session = await createCheckoutSession(user.id, user.email!);
+        const session = await createCheckoutSession(user.id, user.email!, planType);
         res.status(200).json({ sessionId: session.id, url: session.url });
       } else if (action === 'create_portal') {
         // Create customer portal session
