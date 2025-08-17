@@ -133,71 +133,27 @@ export default function HomePage() {
     });
 
     try {
-      // Upload file
-      console.log('Creating FormData for upload...');
-      const formData = new FormData();
-      formData.append('file', file);
-      console.log('FormData created, starting upload request...');
+      // Upload file directly to Vercel Blob
+      console.log('Starting direct blob upload...');
+      const { upload } = await import('@vercel/blob/client');
       
-      const uploadController = new AbortController();
-      const uploadTimeout = setTimeout(() => uploadController.abort(), 30000); // 30 second timeout
-      
-      console.log('Making upload request with headers:', {
-        'Authorization': `Bearer ${authToken.substring(0, 20)}...`
-      });
-
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        },
-        body: formData,
-        signal: uploadController.signal,
+      const blob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/blob/upload',
+        clientPayload: JSON.stringify({
+          userId: user.id,
+          userPlan: userPlan
+        })
       });
       
-      clearTimeout(uploadTimeout);
-      
-      console.log('Upload response received:', {
-        status: uploadResponse.status,
-        statusText: uploadResponse.statusText,
-        headers: Object.fromEntries(uploadResponse.headers.entries())
+      console.log('Blob upload successful:', {
+        url: blob.url,
+        size: blob.size,
+        pathname: blob.pathname
       });
       
-      if (!uploadResponse.ok) {
-        let errorData;
-        let responseText = '';
-        
-        try {
-          responseText = await uploadResponse.text();
-          console.log('Raw response text:', responseText);
-          errorData = JSON.parse(responseText);
-          console.log('Parsed error data:', errorData);
-        } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
-          console.log('Raw response was:', responseText);
-          
-          // Handle non-JSON responses (like 413 errors)
-          if (uploadResponse.status === 413) {
-            throw new Error('File too large. Free tier supports files up to 10MB.');
-          }
-          throw new Error(`Upload failed with status ${uploadResponse.status}`);
-        }
-        throw new Error(errorData.error || errorData.message || 'Upload failed');
-      }
-      
-      let uploadResult;
-      try {
-        const responseText = await uploadResponse.text();
-        console.log('Upload success response text:', responseText);
-        uploadResult = JSON.parse(responseText);
-        console.log('Upload success data:', uploadResult);
-      } catch (parseError) {
-        console.error('Failed to parse upload success response:', parseError);
-        throw new Error('Invalid response from upload server');
-      }
-      
-      const { processingId } = uploadResult;
-      console.log('Processing ID received:', processingId);
+      const processingId = `pdf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('Processing ID generated:', processingId);
       
       setStatus({
         id: processingId,
@@ -206,15 +162,18 @@ export default function HomePage() {
         message: 'Processing your PDF with AI...'
       });
 
-      // Process PDF
+      // Process PDF using blob URL
       console.log('=== STARTING PDF PROCESSING ===');
       console.log('Processing ID:', processingId);
+      console.log('Blob URL:', blob.url);
       
       const processController = new AbortController();
       const processTimeout = setTimeout(() => processController.abort(), 120000); // 2 minute timeout
       
       const processPayload = {
         processingId,
+        blobUrl: blob.url,
+        originalFileName: file.name,
         options: {
           rotate: 0,
           deskew: true,

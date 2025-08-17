@@ -4,9 +4,6 @@
       "maxDuration": 120
     }
   },
-  "limits": {
-    "maxRequestBodySize": "100mb"
-  },
   "build": {
     "env": {
       "NEXT_TELEMETRY_DISABLED": "1"

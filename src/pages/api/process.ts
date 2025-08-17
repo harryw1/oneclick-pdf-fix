@@ -3,6 +3,7 @@ import { PDFDocument, degrees, rgb } from 'pdf-lib';
 import { promises as fs } from 'fs';
 import sharp from 'sharp';
 import { createClient } from '@supabase/supabase-js';
+import { put } from '@vercel/blob';
 import type { PDFProcessingOptions, ProcessedPDF } from '@/types/pdf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -35,13 +36,15 @@ export default async function handler(
   console.log('Process API called with body:', req.body);
   console.log('Authorization header:', req.headers.authorization);
 
-  const { processingId, options = {} } = req.body as {
+  const { processingId, blobUrl, originalFileName, options = {} } = req.body as {
     processingId: string;
+    blobUrl: string;
+    originalFileName: string;
     options: PDFProcessingOptions;
   };
 
-  if (!processingId) {
-    return res.status(400).json({ error: 'Processing ID required' });
+  if (!processingId || !blobUrl) {
+    return res.status(400).json({ error: 'Processing ID and blob URL required' });
   }
 
   // Get current user
@@ -110,18 +113,18 @@ export default async function handler(
   }
 
   try {
-    const inputPath = `/tmp/${processingId}.pdf`;
-    const outputPath = `/tmp/${processingId}_processed.pdf`;
-
-    // Check if input file exists
-    try {
-      await fs.access(inputPath);
-    } catch {
-      return res.status(404).json({ error: 'File not found or expired' });
+    console.log('Downloading PDF from blob URL:', blobUrl);
+    
+    // Download PDF from blob storage
+    const response = await fetch(blobUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download PDF from blob: ${response.status}`);
     }
-
+    
+    const pdfBytes = new Uint8Array(await response.arrayBuffer());
+    console.log('Downloaded PDF size:', pdfBytes.length, 'bytes');
+    
     // Load PDF to get page count
-    const pdfBytes = await fs.readFile(inputPath);
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const pages = pdfDoc.getPages();
     const pageCount = pages.length;
@@ -173,19 +176,22 @@ export default async function handler(
       addDefaultPage: false,
     });
 
-    // Save processed PDF
-    await fs.writeFile(outputPath, processedPdfBytes);
-
-    // Get file stats
-    const stats = await fs.stat(outputPath);
+    // Upload processed PDF to blob storage
+    console.log('Uploading processed PDF to blob storage...');
+    const processedBlob = await put(`processed-${processingId}.pdf`, processedPdfBytes, {
+      access: 'public',
+      addRandomSuffix: false
+    });
+    
+    console.log('Processed PDF uploaded to:', processedBlob.url);
     
     const result: ProcessedPDF = {
       id: processingId,
-      originalName: `${processingId}.pdf`,
-      processedUrl: `/api/download/${processingId}`,
-      downloadUrl: `/api/download/${processingId}`,
+      originalName: originalFileName,
+      processedUrl: processedBlob.url,
+      downloadUrl: processedBlob.url,
       pageCount: pages.length,
-      fileSize: stats.size,
+      fileSize: processedPdfBytes.length,
       processedAt: new Date(),
       options,
     };
@@ -214,9 +220,9 @@ export default async function handler(
       .insert({
         user_id: user.id,
         processing_id: processingId,
-        original_filename: `${processingId}.pdf`,
+        original_filename: originalFileName,
         page_count: pageCount,
-        file_size_bytes: stats.size,
+        file_size_bytes: processedPdfBytes.length,
         processing_options: options,
         status: 'completed',
         completed_at: new Date().toISOString()
@@ -226,8 +232,7 @@ export default async function handler(
       console.error('Failed to insert processing history:', historyError);
     }
 
-    // Clean up input file
-    await fs.unlink(inputPath);
+    // No need to clean up - files are in blob storage
 
     res.status(200).json({ 
       result,
