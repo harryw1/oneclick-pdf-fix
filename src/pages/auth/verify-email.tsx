@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { createClient } from '@/utils/supabase/client';
 import { checkEmailVerification } from '@/utils/session';
 import { getAuthRedirectUrl } from '@/utils/config';
-import Head from 'next/head';
+import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Mail, CheckCircle2, RefreshCw, AlertCircle } from 'lucide-react';
@@ -105,13 +105,12 @@ export default function VerifyEmailPage() {
   }
 
   return (
-    <>
-      <Head>
-        <title>Verify Email - OneClick PDF Fixer</title>
-        <meta name="description" content="Verify your email address to continue" />
-      </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-100/50 flex items-center justify-center p-4">
+    <Layout 
+      title="Verify Email - OneClick PDF Fixer"
+      description="Verify your email address to continue"
+      showAuth={false}
+    >
+      <div className="flex items-center justify-center min-h-[80vh] p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -136,7 +135,7 @@ export default function VerifyEmailPage() {
               
               <div className="flex items-center justify-center space-x-2 text-sm text-gray-500">
                 <AlertCircle className="h-4 w-4" />
-                <span>Don't forget to check your spam folder!</span>
+                <span>Don&apos;t forget to check your spam folder!</span>
               </div>
             </div>
 
@@ -196,6 +195,6 @@ export default function VerifyEmailPage() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </Layout>
   );
 }

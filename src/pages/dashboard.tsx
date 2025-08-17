@@ -1,7 +1,8 @@
-import Head from 'next/head';
 import { FileText, Calendar, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import Layout from '@/components/Layout';
+import Link from 'next/link';
 import { GetServerSideProps } from 'next';
 
 interface UserProfile {
@@ -84,36 +85,26 @@ export default function DashboardPage({ user, profile: initialProfile }: Dashboa
   };
 
   return (
-    <>
-      <Head>
-        <title>Dashboard - OneClick PDF Fixer</title>
-        <meta name="description" content="Manage your PDF processing history and account" />
-      </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-100/50">
-        <header className="bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex justify-between items-center">
-              <a href="/" className="text-2xl font-bold text-gray-900">OneClick PDF Fixer</a>
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600">Welcome, {user.email}!</span>
-                {profile?.plan === 'free' ? (
-                  <a href="/pricing" className="btn-primary">Upgrade to Pro</a>
-                ) : (
-                  <button onClick={handleManageSubscription} className="btn-secondary">
-                    Manage Subscription
-                  </button>
-                )}
-                <button onClick={handleSignOut} className="btn-primary">Sign Out</button>
-              </div>
-            </div>
-          </div>
-        </header>
+    <Layout 
+      title="Dashboard - OneClick PDF Fixer"
+      description="Manage your PDF processing history and account"
+    >
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-            <p className="text-gray-600">Manage your PDF processing history</p>
+          <div className="mb-8 flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+              <p className="text-gray-600">Welcome back, {user.email}!</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              {profile?.plan === 'free' ? (
+                <Link href="/pricing" className="btn-primary">Upgrade to Pro</Link>
+              ) : (
+                <button onClick={handleManageSubscription} className="btn-secondary">
+                  Manage Subscription
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Usage Stats */}
@@ -161,15 +152,14 @@ export default function DashboardPage({ user, profile: initialProfile }: Dashboa
               <div className="text-center text-gray-500 py-12">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                 <p>No files processed yet</p>
-                <a href="/" className="btn-primary mt-4 inline-block">
+                <Link href="/upload" className="btn-primary mt-4 inline-block">
                   Process Your First PDF
-                </a>
+                </Link>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </>
+    </Layout>
   );
 }
 

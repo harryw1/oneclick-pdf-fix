@@ -1,4 +1,3 @@
-import Head from 'next/head';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +5,8 @@ import { Check, Zap, Sparkles, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import Layout from '@/components/Layout';
+import Link from 'next/link';
 import { GetServerSideProps } from 'next';
 
 export default function PricingPage() {
@@ -127,30 +128,10 @@ export default function PricingPage() {
   const plans = getPlans();
 
   return (
-    <>
-      <Head>
-        <title>Pricing - OneClick PDF Fixer</title>
-        <meta name="description" content="Choose your plan for unlimited PDF processing" />
-      </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-100/50">
-        <header className="glass-effect border-b">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-2">
-                <div className="h-8 w-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-white" />
-                </div>
-                <a href="/" className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
-                  OneClick PDF Fixer
-                </a>
-              </div>
-              <Button asChild>
-                <a href="/dashboard">Dashboard</a>
-              </Button>
-            </div>
-          </div>
-        </header>
+    <Layout 
+      title="Pricing - OneClick PDF Fixer"
+      description="Choose your plan for unlimited PDF processing"
+    >
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="text-center mb-16 animate-fade-in">
@@ -284,8 +265,7 @@ export default function PricingPage() {
             </div>
           </div>
         </div>
-      </div>
-    </>
+    </Layout>
   );
 }
 

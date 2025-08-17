@@ -1,11 +1,12 @@
-import Head from 'next/head';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { createClient } from '@/utils/supabase/client';
 import { getAuthRedirectUrl } from '@/utils/config';
+import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, LogIn, UserPlus, Mail, Key } from 'lucide-react';
+import { Loader2, LogIn, UserPlus, Mail, Key, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 
 export default function AuthPage() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -170,15 +171,12 @@ export default function AuthPage() {
   };
 
   return (
-    <>
-      <Head>
-        <title>
-          {showPasswordReset ? 'Reset Password' : isSignUp ? 'Sign Up' : 'Sign In'} - OneClick PDF Fixer
-        </title>
-        <meta name="description" content="Sign in to your OneClick PDF Fixer account" />
-      </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-100/50 flex items-center justify-center p-4">
+    <Layout 
+      title={`${showPasswordReset ? 'Reset Password' : isSignUp ? 'Sign Up' : 'Sign In'} - OneClick PDF Fixer`}
+      description="Access your OneClick PDF Fixer account"
+      showAuth={false}
+    >
+      <div className="flex items-center justify-center min-h-[80vh] p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center space-x-2">
@@ -342,16 +340,16 @@ export default function AuthPage() {
             </div>
 
             <div className="mt-6 text-center">
-              <a 
+              <Link 
                 href="/" 
                 className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
               >
                 ← Back to homepage
-              </a>
+              </Link>
             </div>
           </CardContent>
         </Card>
       </div>
-    </>
+    </Layout>
   );
 }

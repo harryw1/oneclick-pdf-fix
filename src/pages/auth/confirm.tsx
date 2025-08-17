@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { createClient } from '@/utils/supabase/client';
-import Head from 'next/head';
+import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function AuthConfirmPage() {
   const router = useRouter();
@@ -19,12 +20,12 @@ export default function AuthConfirmPage() {
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         
         // Check for PKCE code parameter (modern Supabase auth flow)
-        let code = router.query.code || urlParams.get('code');
-        let next = router.query.next || urlParams.get('next');
+        const code = router.query.code || urlParams.get('code');
+        const next = router.query.next || urlParams.get('next');
         
         // Legacy parameters for backwards compatibility
-        let token_hash = router.query.token_hash || urlParams.get('token_hash') || hashParams.get('access_token');
-        let type = router.query.type || urlParams.get('type') || hashParams.get('type');
+        const token_hash = router.query.token_hash || urlParams.get('token_hash') || hashParams.get('access_token');
+        const type = router.query.type || urlParams.get('type') || hashParams.get('type');
         
         // Log everything for debugging
         console.log('=== Auth Callback Debug ===');
@@ -216,13 +217,12 @@ export default function AuthConfirmPage() {
   };
 
   return (
-    <>
-      <Head>
-        <title>Confirming - OneClick PDF Fixer</title>
-        <meta name="description" content="Confirming your authentication" />
-      </Head>
-
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-100/50 flex items-center justify-center p-4">
+    <Layout 
+      title="Confirming - OneClick PDF Fixer"
+      description="Confirming your authentication"
+      showAuth={false}
+    >
+      <div className="flex items-center justify-center min-h-[80vh] p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -236,10 +236,10 @@ export default function AuthConfirmPage() {
             {status === 'error' && (
               <div className="space-y-3">
                 <Button asChild className="w-full">
-                  <a href="/auth">Try Again</a>
+                  <Link href="/auth">Try Again</Link>
                 </Button>
                 <Button variant="outline" asChild className="w-full">
-                  <a href="/">Back to Homepage</a>
+                  <Link href="/">Back to Homepage</Link>
                 </Button>
               </div>
             )}
@@ -252,6 +252,6 @@ export default function AuthConfirmPage() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </Layout>
   );
 }
