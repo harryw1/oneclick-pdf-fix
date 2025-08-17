@@ -144,15 +144,20 @@ export default async function handler(
         });
       }
     } else if (profile.plan === 'pro_monthly' || profile.plan === 'pro_annual') {
-      // Pro users get 100 pages per month, then overage charges apply
+      // Pro users get 100 pages per month
       const monthlyUsage = profile.usage_this_month || 0;
       const newUsage = monthlyUsage + pageCount;
       
       if (newUsage > 100) {
-        const overagePages = newUsage - 100;
-        const overageCharge = overagePages * 0.10;
-        
-        console.log(`Pro user will incur overage: ${overagePages} pages × $0.10 = $${overageCharge.toFixed(2)}`);\n        // Note: Overage billing would be handled separately via Stripe\n        // For now, we allow the processing and track the overage\n      }\n    }
+        return res.status(403).json({ 
+          error: 'Monthly page limit exceeded', 
+          message: `You've reached your Pro tier limit of 100 pages per month. Please contact support for enterprise options.`,
+          currentUsage: monthlyUsage,
+          pageLimit: 100,
+          requestedPages: pageCount
+        });
+      }
+    }
 
     // Smart rotation detection and correction
     console.log('Detecting optimal page orientations...');
@@ -324,11 +329,6 @@ export default async function handler(
     } else {
       responseUsage.pagesProcessedThisMonth = newUsageThisMonth;
       responseUsage.monthlyLimit = 100;
-      responseUsage.overageRate = 0.10;
-      if (newUsageThisMonth > 100) {
-        responseUsage.overagePages = newUsageThisMonth - 100;
-        responseUsage.overageCharge = (newUsageThisMonth - 100) * 0.10;
-      }
     }
 
     res.status(200).json({ 

@@ -17,13 +17,11 @@ export const PLANS = {
   pro_monthly: {
     name: 'Pro Monthly',
     price: 9,
-    priceId: 'price_pro_monthly_9', // You'll need to create this in Stripe dashboard
+    priceId: 'price_1RwvVORVxTjhJx7KOaIiRhud',
     pages_per_month: 100,
-    overage_price_per_page: 0.10,
     max_file_size_mb: 100,
     features: [
-      '100 pages per month included',
-      '$0.10 per additional page',
+      '100 pages per month',
       'Advanced OCR & deskewing',
       '100MB file uploads',
       'Priority processing',
@@ -33,14 +31,12 @@ export const PLANS = {
   pro_annual: {
     name: 'Pro Annual',
     price: 90,
-    priceId: 'price_pro_annual_90', // You'll need to create this in Stripe dashboard
+    priceId: 'price_1RwvWfRVxTjhJx7K2up31JMo',
     pages_per_month: 100,
-    overage_price_per_page: 0.10,
     max_file_size_mb: 100,
     discount_months: 2,
     features: [
-      '100 pages per month included',
-      '$0.10 per additional page',
+      '100 pages per month',
       'Advanced OCR & deskewing',
       '100MB file uploads',
       'Priority processing',
@@ -75,36 +71,6 @@ export async function createCheckoutSession(userId: string, email: string, planT
   return session;
 }
 
-// Function to calculate and charge overage fees
-export async function calculateOverageCharge(userId: string, pagesUsed: number, plan: 'pro_monthly' | 'pro_annual'): Promise<number> {
-  const planConfig = PLANS[plan];
-  const overagePages = Math.max(0, pagesUsed - planConfig.pages_per_month);
-  const overageAmount = overagePages * planConfig.overage_price_per_page;
-  
-  if (overageAmount > 0) {
-    console.log(`User ${userId} has ${overagePages} overage pages, charging $${overageAmount.toFixed(2)}`);
-  }
-  
-  return overageAmount;
-}
-
-// Function to create one-time overage payment
-export async function createOveragePayment(customerId: string, overageAmount: number, overagePages: number) {
-  if (overageAmount <= 0) return null;
-  
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: Math.round(overageAmount * 100), // Convert to cents
-    currency: 'usd',
-    customer: customerId,
-    description: `Overage charge for ${overagePages} additional pages`,
-    metadata: {
-      type: 'overage',
-      pages: overagePages.toString(),
-    },
-  });
-  
-  return paymentIntent;
-}
 
 export async function createCustomerPortalSession(customerId: string) {
   const session = await stripe.billingPortal.sessions.create({

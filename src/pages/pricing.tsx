@@ -107,8 +107,7 @@ export default function PricingPage() {
         savings: billingCycle === 'annual' ? `Save ${savings}%` : null,
         description: 'For power users and professionals',
         features: [
-          '100 pages per month included',
-          '$0.10 per additional page',
+          '100 pages per month',
           'Advanced OCR & deskewing',
           '100MB file uploads',
           'Priority processing',
