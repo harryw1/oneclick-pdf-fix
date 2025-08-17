@@ -175,7 +175,7 @@ export default function HomePage() {
         originalFileName: file.name,
         options: {
           rotate: 0,
-          deskew: true,
+          deskew: userPlan === 'pro_monthly' || userPlan === 'pro_annual',
           compress: true,
           ocr: userPlan === 'pro_monthly' || userPlan === 'pro_annual',
           classify: userPlan === 'pro_monthly' || userPlan === 'pro_annual'
@@ -408,11 +408,15 @@ export default function HomePage() {
                   <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">
                       {result.pageCount} pages • {(result.fileSize / (1024 * 1024)).toFixed(1)} MB
+                      {result.documentType && ` • ${result.documentType}`}
                     </p>
                     <div className="flex space-x-2">
                       <Badge variant="success">Processed</Badge>
                       <Badge variant="success">Compressed</Badge>
                       <Badge variant="success">Optimized</Badge>
+                      {result.documentType && <Badge variant="outline">Classified</Badge>}
+                      {result.options?.ocr && <Badge variant="outline">OCR</Badge>}
+                      {result.options?.deskew && <Badge variant="outline">Deskewed</Badge>}
                     </div>
                   </div>
                   <Button asChild size="lg" className="shadow-lg">

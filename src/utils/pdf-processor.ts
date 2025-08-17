@@ -12,6 +12,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Initialize Google Cloud Vision client
+const hasCredentials = !!process.env.GOOGLE_CREDENTIALS_BASE64;
+console.log('Google Cloud Vision credentials available:', hasCredentials);
+
 const visionClient = new ImageAnnotatorClient(
   process.env.GOOGLE_CREDENTIALS_BASE64
     ? {
@@ -86,6 +89,12 @@ export async function processDocument(params: {
   // Priority processing: Enhanced features for Pro users
   const isPro = profile.plan === 'pro_monthly' || profile.plan === 'pro_annual';
   console.log(`Processing with ${isPro ? 'Pro' : 'Free'} tier features`);
+  console.log('Pro features requested:', { 
+    deskew: options.deskew, 
+    ocr: options.ocr, 
+    classify: options.classify,
+    autoRotate: options.autoRotate 
+  });
 
   // Smart rotation detection using Google Cloud Vision API (Pro users get enhanced accuracy)
   let pageRotations: number[] = [0];
@@ -94,7 +103,11 @@ export async function processDocument(params: {
       pageRotations = await detectOptimalRotationWithVision(pdfBytes, isPro);
       console.log('Vision API rotation analysis complete');
     } catch (error) {
-      console.warn('Vision API rotation detection failed:', error);
+      console.error('Vision API rotation detection failed:', {
+        error: error instanceof Error ? error.message : error,
+        hasCredentials,
+        isPro
+      });
       pageRotations = [0];
     }
   }
@@ -199,7 +212,12 @@ export async function processDocument(params: {
       console.log(`Document classified as: ${documentType}`);
 
     } catch (error) {
-      console.warn('Google Vision processing failed, falling back to basic processing:', error);
+      console.error('Google Vision OCR/Classification failed:', {
+        error: error instanceof Error ? error.message : error,
+        hasCredentials,
+        isPro,
+        options: { ocr: options.ocr, classify: options.classify }
+      });
     }
   }
 
