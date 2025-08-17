@@ -17,9 +17,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Initialize Google Cloud Vision client
-const visionClient = new ImageAnnotatorClient({
-  keyFilename: './google-credentials.json',
-});
+const visionClient = new ImageAnnotatorClient(
+  process.env.GOOGLE_CREDENTIALS_BASE64
+    ? {
+        credentials: JSON.parse(
+          Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString()
+        ),
+      }
+    : { keyFilename: './google-credentials.json' } // Fallback for local development
+);
 
 export const config = {
   api: {
