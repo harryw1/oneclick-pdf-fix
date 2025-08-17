@@ -126,7 +126,7 @@ export default function DashboardPage({ user, profile: initialProfile }: Dashboa
                       <p className="text-sm font-medium text-muted-foreground">Plan</p>
                       <p className="text-2xl font-bold text-foreground">
                         {profile?.plan === 'pro_monthly' ? 'Pro Monthly' : 
-                         profile?.plan === 'pro_annual' ? 'Pro Annual' : 'Free'}
+                         profile?.plan === 'pro_annual' ? 'Pro Annual' : 'Free'} v2
                       </p>
                     </div>
                   </div>
