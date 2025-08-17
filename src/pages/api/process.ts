@@ -161,7 +161,7 @@ export default async function handler(
 
     // Smart rotation detection and correction
     console.log('Detecting optimal page orientations...');
-    const convert = pdf2pic.fromBuffer(pdfBytes, {
+    const convert = pdf2pic.fromBuffer(Buffer.from(pdfBytes), {
       density: 100,
       saveFilename: 'page',
       savePath: '/tmp',
