@@ -59,8 +59,8 @@ export async function createCheckoutSession(userId: string, email: string, planT
       },
     ],
     mode: 'subscription',
-    success_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard?success=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/pricing?canceled=true`,
+    success_url: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/dashboard?success=true`,
+    cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/pricing?canceled=true`,
     metadata: {
       userId,
       planType,
@@ -75,7 +75,7 @@ export async function createCheckoutSession(userId: string, email: string, planT
 export async function createCustomerPortalSession(customerId: string) {
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
-    return_url: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard`,
+    return_url: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}/dashboard`,
   });
 
   return session;
