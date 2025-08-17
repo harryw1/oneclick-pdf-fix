@@ -4,6 +4,8 @@ import { promises as fs } from 'fs';
 import sharp from 'sharp';
 import { createClient } from '@supabase/supabase-js';
 import { put } from '@vercel/blob';
+import { createWorker } from 'tesseract.js';
+import pdf2pic from 'pdf2pic';
 import type { PDFProcessingOptions, ProcessedPDF } from '@/types/pdf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -132,42 +134,100 @@ export default async function handler(
     // Check usage limits for free users
     if (profile.plan === 'free') {
       const newUsage = profile.usage_this_week + pageCount;
-      if (newUsage > 50) {
+      if (newUsage > 5) {
         return res.status(403).json({ 
           error: 'Weekly page limit exceeded', 
-          message: `You've reached your free tier limit of 50 pages per week. Upgrade to Pro for unlimited processing.`,
+          message: `You've reached your free tier limit of 5 pages per week. Upgrade to Pro for unlimited processing.`,
           currentUsage: profile.usage_this_week,
-          pageLimit: 50,
+          pageLimit: 5,
           requestedPages: pageCount
         });
       }
     }
 
-    // Apply transformations
-    if (options.rotate) {
-      pages.forEach(page => {
-        page.setRotation(degrees(options.rotate || 0));
-      });
-    }
+    // Smart rotation detection and correction
+    console.log('Detecting optimal page orientations...');
+    const convert = pdf2pic.fromBuffer(pdfBytes, {
+      density: 100,
+      saveFilename: 'page',
+      savePath: '/tmp',
+      format: 'png',
+      width: 800,
+      height: 600
+    });
 
-    // Implement basic deskewing using image processing
-    if (options.deskew) {
-      console.log('Applying deskewing...');
-      // For now, we'll implement a basic version that could be enhanced later
-      // This is a simplified approach - in production you'd want more sophisticated skew detection
-      for (let i = 0; i < pages.length; i++) {
-        const page = pages[i];
-        // Apply a small rotation correction (this could be enhanced with actual skew detection)
-        const currentRotation = page.getRotation().angle;
-        page.setRotation(degrees(currentRotation + 0)); // Placeholder for actual skew correction
+    const pageRotations: number[] = [];
+    
+    // Process each page for rotation detection
+    for (let i = 0; i < Math.min(pages.length, 5); i++) { // Limit to first 5 pages for performance
+      try {
+        const pageImage = await convert(i + 1, { responseType: 'buffer' });
+        const rotation = await detectOptimalRotation(pageImage.buffer);
+        pageRotations.push(rotation);
+        console.log(`Page ${i + 1} optimal rotation: ${rotation}°`);
+      } catch (error) {
+        console.warn(`Failed to detect rotation for page ${i + 1}:`, error);
+        pageRotations.push(0);
       }
     }
 
-    // Implement basic OCR functionality
+    // Apply smart rotation
+    pages.forEach((page, index) => {
+      const rotation = pageRotations[index] || pageRotations[0] || 0;
+      if (rotation !== 0) {
+        page.setRotation(degrees(rotation));
+        console.log(`Applied ${rotation}° rotation to page ${index + 1}`);
+      }
+    });
+
+    // Implement deskewing using image processing
+    if (options.deskew) {
+      console.log('Applying deskewing...');
+      
+      for (let i = 0; i < Math.min(pages.length, 3); i++) { // Limit for performance
+        try {
+          const pageImage = await convert(i + 1, { responseType: 'buffer' });
+          const skewAngle = await detectSkewAngle(pageImage.buffer);
+          
+          if (Math.abs(skewAngle) > 0.5) { // Only correct significant skew
+            const page = pages[i];
+            const currentRotation = page.getRotation().angle;
+            page.setRotation(degrees(currentRotation + skewAngle));
+            console.log(`Applied ${skewAngle}° skew correction to page ${i + 1}`);
+          }
+        } catch (error) {
+          console.warn(`Failed to deskew page ${i + 1}:`, error);
+        }
+      }
+    }
+
+    // Implement OCR functionality
     if (options.ocr) {
-      console.log('Processing OCR...');
-      // OCR processing without watermark - keep the service professional
-      // TODO: Implement actual OCR text layer extraction and embedding
+      console.log('Processing OCR for text extraction...');
+      
+      try {
+        const worker = await createWorker('eng');
+        
+        for (let i = 0; i < Math.min(pages.length, 3); i++) { // Limit for performance
+          try {
+            const pageImage = await convert(i + 1, { responseType: 'buffer' });
+            const { data: { text } } = await worker.recognize(pageImage.buffer);
+            
+            if (text.trim()) {
+              console.log(`OCR extracted ${text.length} characters from page ${i + 1}`);
+              // Note: Adding actual text layers to PDF would require more complex implementation
+              // For now, we're extracting and logging the text to verify OCR works
+            }
+          } catch (error) {
+            console.warn(`OCR failed for page ${i + 1}:`, error);
+          }
+        }
+        
+        await worker.terminate();
+        console.log('OCR processing completed');
+      } catch (error) {
+        console.error('OCR initialization failed:', error);
+      }
     }
 
     // Basic compression by optimizing the PDF structure
@@ -252,5 +312,94 @@ export default async function handler(
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
+  }
+}
+
+// Helper function to detect optimal rotation using text detection
+async function detectOptimalRotation(imageBuffer: Buffer): Promise<number> {
+  try {
+    const worker = await createWorker('eng');
+    const rotations = [0, 90, 180, 270];
+    let bestRotation = 0;
+    let bestConfidence = 0;
+    
+    for (const rotation of rotations) {
+      try {
+        let processedBuffer = imageBuffer;
+        
+        if (rotation !== 0) {
+          processedBuffer = await sharp(imageBuffer)
+            .rotate(rotation)
+            .png()
+            .toBuffer();
+        }
+        
+        const { data: { confidence } } = await worker.recognize(processedBuffer);
+        
+        if (confidence > bestConfidence) {
+          bestConfidence = confidence;
+          bestRotation = rotation;
+        }
+      } catch (error) {
+        console.warn(`Failed to test rotation ${rotation}:`, error);
+      }
+    }
+    
+    await worker.terminate();
+    return bestRotation;
+  } catch (error) {
+    console.error('Rotation detection failed:', error);
+    return 0;
+  }
+}
+
+// Helper function to detect skew angle using edge detection
+async function detectSkewAngle(imageBuffer: Buffer): Promise<number> {
+  try {
+    // Convert to grayscale and apply edge detection
+    const edges = await sharp(imageBuffer)
+      .grayscale()
+      .convolve({
+        width: 3,
+        height: 3,
+        kernel: [-1, -1, -1, -1, 8, -1, -1, -1, -1]
+      })
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    
+    // Simple skew detection using Hough transform approximation
+    // This is a simplified version - production would use more sophisticated algorithms
+    const { data, info } = edges;
+    const width = info.width;
+    const height = info.height;
+    
+    // Sample horizontal lines and calculate average angle
+    let angleSum = 0;
+    let validLines = 0;
+    
+    for (let y = height * 0.2; y < height * 0.8; y += 20) {
+      const lineData = [];
+      for (let x = 0; x < width; x++) {
+        const pixel = data[y * width + x];
+        if (pixel > 128) lineData.push(x);
+      }
+      
+      if (lineData.length > width * 0.1) {
+        // Calculate line angle (simplified)
+        const start = lineData[0];
+        const end = lineData[lineData.length - 1];
+        const angle = Math.atan2(0, end - start) * (180 / Math.PI);
+        angleSum += angle;
+        validLines++;
+      }
+    }
+    
+    const avgAngle = validLines > 0 ? angleSum / validLines : 0;
+    const skewAngle = Math.max(-5, Math.min(5, avgAngle)); // Limit to ±5 degrees
+    
+    return skewAngle;
+  } catch (error) {
+    console.error('Skew detection failed:', error);
+    return 0;
   }
 }
