@@ -15,56 +15,47 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  // Check authentication
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-
-  const token = authHeader.split(' ')[1];
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  
-  if (authError || !user) {
-    return res.status(401).json({ error: 'Invalid authentication' });
-  }
-
-  // Get user profile to check tier
-  const userSupabase = createClient(supabaseUrl!, supabaseAnonKey!, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  });
-
-  const { data: profile } = await userSupabase
-    .from('profiles')
-    .select('plan')
-    .eq('id', user.id)
-    .single();
-
-  const userPlan = profile?.plan || 'free';
-  const maxFileSize = userPlan === 'pro' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
-
   try {
     const jsonResponse = await handleUpload({
       body: req.body,
       request: req,
-      onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ['application/pdf'],
-        maximumSizeInBytes: maxFileSize,
-        addRandomSuffix: true,
-      }),
-      onUploadCompleted: async ({ blob }) => {
+      onBeforeGenerateToken: async (pathname, clientPayload) => {
+        // Parse client payload to get user info
+        let userInfo;
+        try {
+          userInfo = JSON.parse(clientPayload || '{}');
+        } catch {
+          throw new Error('Invalid client payload');
+        }
+
+        const { userId, userPlan } = userInfo;
+        
+        if (!userId) {
+          throw new Error('User ID required');
+        }
+
+        // Verify user exists in our database
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('plan')
+          .eq('id', userId)
+          .single();
+
+        const actualUserPlan = profile?.plan || 'free';
+        const maxFileSize = actualUserPlan === 'pro' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+
+        return {
+          allowedContentTypes: ['application/pdf'],
+          maximumSizeInBytes: maxFileSize,
+          addRandomSuffix: true,
+        };
+      },
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
         console.log('PDF uploaded to blob:', blob.url);
       },
     });
 
-    return res.status(200).json(jsonResponse);
+    return res.json(jsonResponse);
   } catch (error) {
     console.error('Blob upload error:', error);
     return res.status(500).json({ 
