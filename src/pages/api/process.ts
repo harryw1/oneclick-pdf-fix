@@ -132,12 +132,12 @@ export default async function handler(
     // Check usage limits for free users
     if (profile.plan === 'free') {
       const newUsage = profile.usage_this_week + pageCount;
-      if (newUsage > 3) {
+      if (newUsage > 50) {
         return res.status(403).json({ 
           error: 'Weekly page limit exceeded', 
-          message: `You've reached your free tier limit of 3 pages per week. Upgrade to Pro for unlimited processing.`,
+          message: `You've reached your free tier limit of 50 pages per week. Upgrade to Pro for unlimited processing.`,
           currentUsage: profile.usage_this_week,
-          pageLimit: 3,
+          pageLimit: 50,
           requestedPages: pageCount
         });
       }
