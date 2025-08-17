@@ -52,6 +52,8 @@ export default function PricingPage() {
     setLoading(true);
     
     try {
+      console.log('Making subscription request with:', { planType, hasAuthToken: !!authToken });
+      
       const response = await fetch('/api/subscription', {
         method: 'POST',
         headers: {
@@ -62,11 +64,13 @@ export default function PricingPage() {
       });
 
       const data = await response.json();
+      console.log('Subscription response:', { status: response.status, data });
 
       if (response.ok && data.url) {
         window.location.href = data.url;
       } else {
-        alert('Failed to start checkout process');
+        console.error('Checkout failed:', data);
+        alert(`Failed to start checkout process: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Checkout error:', error);
