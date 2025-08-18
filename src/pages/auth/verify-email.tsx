@@ -87,7 +87,7 @@ export default function VerifyEmailPage() {
         setMessage('Email not yet verified. Please check your inbox and click the verification link.');
         setMessageType('info');
       }
-    } catch (_error) {
+    } catch {
       setMessage('Error checking verification status. Please try again.');
       setMessageType('error');
     } finally {

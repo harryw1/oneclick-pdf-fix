@@ -23,7 +23,7 @@ interface DashboardProps {
   profile: UserProfile | null;
 }
 
-export default function DashboardPage({ user, profile: initialProfile }: DashboardProps) {
+export default function DashboardPage({ profile: initialProfile }: DashboardProps) {
   const [profile] = useState<UserProfile | null>(initialProfile);
   const [authToken, setAuthToken] = useState<string | null>(null);
 

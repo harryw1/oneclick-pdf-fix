@@ -81,7 +81,7 @@ export type PDFProcessingOptions = _PDFProcessingOptions;
 export type ProcessedPDF = _ProcessedPDF;
 
 // API Response Types
-export interface APIResponse<T = any> {
+export interface APIResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -130,13 +130,13 @@ export interface RateLimitResult {
 export interface AppError {
   code: string;
   message: string;
-  details?: any;
+  details?: unknown;
 }
 
 // Authentication Types
 export interface AuthResponse {
   user?: AppUser;
-  session?: any;
+  session?: { access_token: string; refresh_token: string; expires_at: number; };
   error?: string;
 }
 

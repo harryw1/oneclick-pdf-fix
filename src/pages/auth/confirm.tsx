@@ -190,7 +190,7 @@ export default function AuthConfirmPage() {
     if (router.isReady) {
       handleAuthCallback();
     }
-  }, [router.isReady, router.query]);
+  }, [router, status]);
 
 
   const getIcon = () => {

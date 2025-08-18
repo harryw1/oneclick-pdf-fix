@@ -42,7 +42,7 @@ export default async function handler(
           throw new Error('Invalid client payload');
         }
 
-        const { userId, userPlan } = userInfo;
+        const { userId } = userInfo;
         
         if (!userId) {
           throw new Error('User ID required');
@@ -64,7 +64,7 @@ export default async function handler(
           addRandomSuffix: true,
         };
       },
-      onUploadCompleted: async ({ blob, tokenPayload }) => {
+      onUploadCompleted: async ({ blob }) => {
         console.log('PDF uploaded to blob:', blob.url);
       },
     });

@@ -15,7 +15,6 @@ export default function SessionManager({ children, requireAuth = false }: Sessio
 
   useEffect(() => {
     let refreshTimer: NodeJS.Timeout;
-    let sessionCheckInterval: NodeJS.Timeout;
 
     const checkAndRefreshSession = async () => {
       try {
