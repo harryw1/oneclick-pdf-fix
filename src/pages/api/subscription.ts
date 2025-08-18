@@ -59,13 +59,14 @@ export default async function handler(
     },
   });
 
-  let { data: profile, error: profileError } = await userSupabase
+  const { data: initialProfile, error: profileError } = await userSupabase
     .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single();
 
   // Create profile if it doesn't exist (like in process.ts)
+  let profile = initialProfile;
   if (profileError || !profile) {
     console.log('Profile not found for user:', user.id, 'Creating new profile...');
     

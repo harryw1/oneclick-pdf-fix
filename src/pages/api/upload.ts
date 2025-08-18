@@ -76,6 +76,8 @@ export default async function handler(
       uploadDir: '/tmp',
       keepExtensions: true,
       maxFileSize: maxFileSize,
+      maxFields: 1,
+      maxFiles: 1,
       filter: ({ mimetype, originalFilename }) => {
         // SECURITY: Enhanced file validation
         if (mimetype !== 'application/pdf') return false;

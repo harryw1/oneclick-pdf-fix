@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { createClient } from '@/utils/supabase/client';
+import { toAppUser, type AppUser } from '@/types/app';
 import { checkEmailVerification } from '@/utils/session';
 import { getAuthRedirectUrl } from '@/utils/config';
 import Layout from '@/components/Layout';
@@ -12,7 +13,7 @@ export default function VerifyEmailPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
-  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [checkingVerification, setCheckingVerification] = useState(false);
   const router = useRouter();
 
@@ -26,7 +27,7 @@ export default function VerifyEmailPage() {
         return;
       }
       
-      setUser(user);
+      setUser(toAppUser(user));
       
       // Check if already verified
       const { verified } = await checkEmailVerification();

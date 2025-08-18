@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import Layout from '@/components/Layout';
+import { toAppUser, type AppUser } from '@/types/app';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -64,19 +65,19 @@ const benefits = [
 ];
 
 export default function HomePage() {
-  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
+      setUser(toAppUser(session?.user || null));
     };
 
     getUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
+      setUser(toAppUser(session?.user || null));
     });
 
     return () => subscription.unsubscribe();

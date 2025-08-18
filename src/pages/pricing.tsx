@@ -6,10 +6,11 @@ import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import Layout from '@/components/Layout';
+import { toAppUser, type AppUser } from '@/types/app';
 import { GetServerSideProps } from 'next';
 
 export default function PricingPage() {
-  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
@@ -20,7 +21,7 @@ export default function PricingPage() {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        setUser(session.user);
+        setUser(toAppUser(session.user));
         setAuthToken(session.access_token);
       }
     };
@@ -30,7 +31,7 @@ export default function PricingPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session) {
-          setUser(session.user);
+          setUser(toAppUser(session.user));
           setAuthToken(session.access_token);
         } else {
           setUser(null);

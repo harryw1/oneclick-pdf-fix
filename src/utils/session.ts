@@ -1,8 +1,9 @@
 import { createClient } from '@/utils/supabase/client';
+import { toAppUser, type AppUser } from '@/types/app';
 
 export interface SessionInfo {
   isAuthenticated: boolean;
-  user: { id: string; email: string } | null;
+  user: AppUser | null;
   expiresAt?: number;
   needsRefresh: boolean;
 }
@@ -30,7 +31,7 @@ export async function getSessionInfo(): Promise<SessionInfo> {
     
     return {
       isAuthenticated: true,
-      user: session.user,
+      user: toAppUser(session.user),
       expiresAt,
       needsRefresh
     };

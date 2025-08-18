@@ -140,9 +140,12 @@ export default function AuthConfirmPage() {
         // Legacy approach: OTP verification
         if (token_hash && type) {
           console.log('Attempting legacy OTP verification...');
+          const validEmailTypes = ['signup', 'recovery', 'invite', 'magiclink', 'email_change'] as const;
+          const emailType = validEmailTypes.includes(type as typeof validEmailTypes[number]) ? type as 'signup' | 'recovery' | 'invite' | 'magiclink' | 'email_change' : 'signup';
+          
           const { data, error } = await supabase.auth.verifyOtp({
             token_hash: token_hash as string,
-            type: type as 'signup' | 'recovery' | 'invite' | 'magiclink' | 'email_change' | 'sms' | 'phone_change'
+            type: emailType
           });
           
           if (error) {

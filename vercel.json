@@ -1,7 +1,16 @@
 {
   "functions": {
     "src/pages/api/**/*.ts": {
-      "maxDuration": 120
+      "maxDuration": 120,
+      "memory": 1024
+    },
+    "src/pages/api/process.ts": {
+      "maxDuration": 120,
+      "memory": 3008
+    },
+    "src/pages/api/upload.ts": {
+      "maxDuration": 60,
+      "memory": 1024
     }
   },
   "build": {
@@ -12,7 +21,7 @@
   "crons": [
     {
       "path": "/api/process-queue",
-      "schedule": "*/30 * * * * *"
+      "schedule": "*/5 * * * *"
     }
   ]
 }

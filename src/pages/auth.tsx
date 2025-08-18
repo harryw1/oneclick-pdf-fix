@@ -68,9 +68,9 @@ export default function AuthPage() {
         }, 2000);
       } else if (error instanceof Error && error.message?.includes('Too many requests')) {
         errorMessage = 'Whoa there! Too many attempts. Please take a short break and try again in a few minutes.';
-      } else if (error.message?.includes('User already registered')) {
+      } else if (error instanceof Error && error.message?.includes('User already registered')) {
         errorMessage = 'Good news! You already have an account with this email. Try signing in instead.';
-      } else if (error.message?.includes('Password should be at least')) {
+      } else if (error instanceof Error && error.message?.includes('Password should be at least')) {
         errorMessage = 'Your password needs to be at least 6 characters long for security.';
       }
       

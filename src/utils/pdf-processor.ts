@@ -2,7 +2,13 @@ import { PDFDocument, degrees } from 'pdf-lib';
 import { createClient } from '@supabase/supabase-js';
 import { put } from '@vercel/blob';
 import { ImageAnnotatorClient } from '@google-cloud/vision';
-import type { PDFProcessingOptions, ProcessedPDF } from '@/types/pdf';
+import type { 
+  PDFProcessingOptions, 
+  ProcessedPDF,
+  VisionDocumentTextResponse,
+  VisionWebDetectionResponse,
+  VisionWebDetection
+} from '@/types/app';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -11,19 +17,32 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Initialize Google Cloud Vision client
+// Initialize Google Cloud Vision client with better error handling
+let visionClient: ImageAnnotatorClient | null = null;
 const hasCredentials = !!process.env.GOOGLE_CREDENTIALS_BASE64;
-console.log('Google Cloud Vision credentials available:', hasCredentials);
 
-const visionClient = new ImageAnnotatorClient(
-  process.env.GOOGLE_CREDENTIALS_BASE64
-    ? {
+function getVisionClient(): ImageAnnotatorClient | null {
+  if (!hasCredentials) {
+    console.warn('Google Cloud Vision credentials not available');
+    return null;
+  }
+  
+  if (!visionClient) {
+    try {
+      visionClient = new ImageAnnotatorClient({
         credentials: JSON.parse(
-          Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString()
+          Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64!, 'base64').toString()
         ),
-      }
-    : { keyFilename: './google-credentials.json' }
-);
+      });
+      console.log('Google Cloud Vision client initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize Google Cloud Vision client:', error);
+      return null;
+    }
+  }
+  
+  return visionClient;
+}
 
 export async function processDocument(params: {
   processingId: string;
@@ -98,7 +117,7 @@ export async function processDocument(params: {
 
   // Smart rotation detection using Google Cloud Vision API (Pro users get enhanced accuracy)
   let pageRotations: number[] = [0];
-  if (options.autoRotate !== false) {
+  if (options.autoRotate !== false && hasCredentials) {
     try {
       pageRotations = await detectOptimalRotationWithVision(pdfBytes, isPro);
       console.log('Vision API rotation analysis complete');
@@ -110,6 +129,8 @@ export async function processDocument(params: {
       });
       pageRotations = [0];
     }
+  } else if (options.autoRotate !== false && !hasCredentials) {
+    console.warn('Auto-rotation skipped: Google Cloud Vision credentials not available');
   }
 
   // Apply smart rotation
@@ -122,18 +143,24 @@ export async function processDocument(params: {
   });
 
   // Document skew detection using Google Cloud Vision API (Pro feature)
-  if (options.deskew && isPro) {
+  if (options.deskew && isPro && hasCredentials) {
     console.log('Applying deskewing with Vision API (Pro feature)...');
     
     try {
       const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
       
-      const [result] = await visionClient.documentTextDetection({
+      const client = getVisionClient();
+      if (!client) {
+        throw new Error('Vision API client not available');
+      }
+      
+      const [result] = await client.documentTextDetection({
         image: { content: pdfBase64 }
       });
 
       // Analyze text block orientations to detect skew
-      const textAnnotations = result.textAnnotations || [];
+      const docTextResponse = result as VisionDocumentTextResponse;
+      const textAnnotations = docTextResponse.textAnnotations || [];
       if (textAnnotations.length > 1) {
         let totalSkew = 0;
         let validBlocks = 0;
@@ -182,7 +209,7 @@ export async function processDocument(params: {
 
   // Document classification and OCR (Pro features)
   let documentType = 'Unknown';
-  if (isPro && (options.ocr || options.classify)) {
+  if (isPro && (options.ocr || options.classify) && hasCredentials) {
     console.log('Processing document classification and OCR with Google Cloud Vision (Pro features)...');
     
     try {
@@ -190,25 +217,32 @@ export async function processDocument(params: {
       const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
       
       // Run both document text detection and web entity detection for classification
+      const client = getVisionClient();
+      if (!client) {
+        throw new Error('Vision API client not available');
+      }
+      
       const [textResult, entityResult] = await Promise.all([
-        visionClient.documentTextDetection({
+        client.documentTextDetection({
           image: { content: pdfBase64 }
         }),
-        visionClient.webDetection({
+        client.webDetection({
           image: { content: pdfBase64 }
         })
       ]);
 
-      // Extract text for OCR
-      const fullTextAnnotation = textResult[0].fullTextAnnotation;
+      // Extract text for OCR - Type the results properly
+      const docTextResponse = textResult[0] as VisionDocumentTextResponse;
+      const webDetectionResponse = entityResult[0] as VisionWebDetectionResponse;
+      
       let extractedText = '';
-      if (fullTextAnnotation?.text) {
-        extractedText = fullTextAnnotation.text;
+      if (docTextResponse.fullTextAnnotation?.text) {
+        extractedText = docTextResponse.fullTextAnnotation.text;
         console.log(`OCR extracted ${extractedText.length} characters from document`);
       }
 
       // Classify document type using web entities and text analysis
-      documentType = classifyDocument(extractedText, entityResult[0].webDetection);
+      documentType = classifyDocument(extractedText, webDetectionResponse.webDetection);
       console.log(`Document classified as: ${documentType}`);
 
     } catch (error) {
@@ -276,13 +310,19 @@ async function detectOptimalRotationWithVision(pdfBytes: Uint8Array, isPro: bool
   try {
     const pdfBase64 = Buffer.from(pdfBytes).toString('base64');
     
-    const [result] = await visionClient.documentTextDetection({
+    const client = getVisionClient();
+    if (!client) {
+      throw new Error('Vision API client not available');
+    }
+    
+    const [result] = await client.documentTextDetection({
       image: {
         content: pdfBase64,
       },
     });
 
-    const textAnnotations = result.textAnnotations || [];
+    const docTextResponse = result as VisionDocumentTextResponse;
+    const textAnnotations = docTextResponse.textAnnotations || [];
     if (textAnnotations.length === 0) return [0];
 
     // Enhanced rotation detection for Pro users
@@ -321,7 +361,7 @@ async function detectOptimalRotationWithVision(pdfBytes: Uint8Array, isPro: bool
   }
 }
 
-function classifyDocument(text: string, webDetection: unknown): string {
+function classifyDocument(text: string, webDetection: VisionWebDetection | undefined): string {
   if (!text) return 'Unknown';
   
   const textLower = text.toLowerCase();

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { createClient } from '@/utils/supabase/client';
+import { toAppUser, type AppUser } from '@/types/app';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -19,7 +20,7 @@ interface ProcessingStatus {
 
 export default function ProcessingPage() {
   const [status, setStatus] = useState<ProcessingStatus>({ id: '', status: 'uploading', progress: 0 });
-  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [userPlan, setUserPlan] = useState<'free' | 'pro_monthly' | 'pro_annual'>('free');
   const router = useRouter();
   const { id } = router.query;
@@ -34,7 +35,7 @@ export default function ProcessingPage() {
         return;
       }
 
-      setUser(session.user);
+      setUser(toAppUser(session.user));
       
       // Get user profile to determine plan
       const { data: profile } = await supabase
