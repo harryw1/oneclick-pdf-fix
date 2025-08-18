@@ -70,15 +70,8 @@ export default async function handler(
     res.status(200).send(fileBuffer);
     console.log('File sent successfully');
 
-    // Clean up file after download
-    setTimeout(async () => {
-      try {
-        await fs.unlink(filePath);
-        console.log('File cleaned up successfully');
-      } catch (error) {
-        console.error('Failed to clean up file:', error);
-      }
-    }, 1000);
+    // Note: Files are now kept for 24 hours and cleaned up by cron job
+    // No immediate cleanup after download to allow redownloads
     
   } catch (error) {
     console.error('Download error:', error);

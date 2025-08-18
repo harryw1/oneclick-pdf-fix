@@ -273,7 +273,7 @@ export default function ResultsPage() {
         <Card className="mt-8 bg-blue-50/50 border-blue-200">
           <CardContent className="p-4">
             <p className="text-sm text-blue-800 text-center">
-              🔒 Your processed file will be automatically deleted from our servers within 24 hours for security.
+              🔒 Your processed file will be available for download for 24 hours, then automatically deleted for security. You can redownload from your dashboard during this period.
             </p>
           </CardContent>
         </Card>

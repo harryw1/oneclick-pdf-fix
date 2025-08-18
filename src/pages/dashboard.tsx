@@ -41,6 +41,27 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
   const [processingHistory, setProcessingHistory] = useState<ProcessingHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
 
+  // Helper function to calculate file expiration
+  const getFileExpiration = (createdAt: string) => {
+    const created = new Date(createdAt);
+    const expiration = new Date(created.getTime() + 24 * 60 * 60 * 1000); // 24 hours
+    const now = new Date();
+    
+    if (expiration <= now) {
+      return { expired: true, timeLeft: 'Expired' };
+    }
+    
+    const timeLeft = expiration.getTime() - now.getTime();
+    const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
+    const minutesLeft = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hoursLeft > 0) {
+      return { expired: false, timeLeft: `${hoursLeft}h ${minutesLeft}m left` };
+    } else {
+      return { expired: false, timeLeft: `${minutesLeft}m left` };
+    }
+  };
+
   useEffect(() => {
     const supabase = createClient();
     
@@ -213,7 +234,9 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {processingHistory.map((item) => (
+                    {processingHistory.map((item) => {
+                      const expiration = getFileExpiration(item.createdAt);
+                      return (
                       <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                         <div className="flex items-center space-x-3">
                           <FileText className="h-5 w-5 text-red-500" />
@@ -228,6 +251,14 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
                                 <Clock className="h-3 w-3" />
                                 <span>{new Date(item.createdAt).toLocaleDateString()}</span>
                               </div>
+                              {item.status === 'completed' && (
+                                <>
+                                  <span>•</span>
+                                  <span className={expiration.expired ? 'text-red-600' : 'text-orange-600'}>
+                                    {expiration.timeLeft}
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -240,16 +271,31 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
                             {item.status}
                           </div>
                           {item.status === 'completed' && (
-                            <Button size="sm" variant="outline" asChild>
-                              <Link href={`/results/${item.processingId}`}>
-                                <ExternalLink className="h-3 w-3 mr-1" />
-                                View
-                              </Link>
-                            </Button>
+                            <>
+                              {!expiration.expired ? (
+                                <Button size="sm" variant="outline" asChild>
+                                  <a href={`/api/download/${item.processingId}`} download>
+                                    <Download className="h-3 w-3 mr-1" />
+                                    Download
+                                  </a>
+                                </Button>
+                              ) : (
+                                <Button size="sm" variant="outline" disabled>
+                                  <Download className="h-3 w-3 mr-1" />
+                                  Expired
+                                </Button>
+                              )}
+                              <Button size="sm" variant="outline" asChild>
+                                <Link href={`/results/${item.processingId}`}>
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  View
+                                </Link>
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 )}
               </div>

@@ -249,7 +249,7 @@ export default function PricingPage() {
                 <CardContent className="p-6">
                   <h4 className="font-semibold mb-2">Is my data secure?</h4>
                   <p className="text-sm text-muted-foreground">
-                    Yes! All uploads are processed securely and deleted after processing. Pro users get 90-day storage with encrypted backups.
+                    Yes! All uploads are processed securely and files are available for download for 24 hours, then automatically deleted for security.
                   </p>
                 </CardContent>
               </Card>

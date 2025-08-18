@@ -55,7 +55,7 @@ const benefits = [
   {
     icon: Shield,
     title: 'Secure & Private',
-    description: 'Your documents are encrypted in transit and automatically deleted after processing.'
+    description: 'Your documents are encrypted in transit and available for 24 hours, then automatically deleted for security.'
   },
   {
     icon: Sparkles,

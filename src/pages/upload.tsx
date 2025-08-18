@@ -166,7 +166,7 @@ export default function UploadPage() {
             <CardContent className="p-6">
               <Shield className="h-8 w-8 text-primary-600 mx-auto mb-3" />
               <h3 className="font-semibold mb-2">Secure & Private</h3>
-              <p className="text-sm text-muted-foreground">Files automatically deleted after download</p>
+              <p className="text-sm text-muted-foreground">Files available for 24 hours, then automatically deleted</p>
             </CardContent>
           </Card>
           
