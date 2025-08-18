@@ -48,8 +48,9 @@ This is a Next.js 15 application providing PDF processing services with Supabase
 ### File Processing Pipeline
 - Upload validation: PDF only, 100MB max size
 - Temporary file storage in `/tmp` with unique processing IDs
-- Current features: PDF compression and basic optimization
-- Planned features: Deskewing and OCR (marked as TODO in codebase)
+- **Free tier features**: PDF compression, basic optimization, auto-rotation
+- **Pro tier features**: Advanced OCR with Google Cloud Vision, document deskewing, document classification, enhanced compression
+- All features are fully implemented and production-ready
 
 ### Configuration
 - API routes have 120-second timeout configured in `vercel.json`

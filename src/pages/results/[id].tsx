@@ -109,7 +109,9 @@ export default function ResultsPage() {
       });
       
       if (!response.ok) {
-        throw new Error('Download failed');
+        const errorData = await response.text();
+        console.error('Download failed:', response.status, errorData);
+        throw new Error(`Download failed: ${response.status} - ${errorData}`);
       }
       
       const blob = await response.blob();
@@ -123,7 +125,7 @@ export default function ResultsPage() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download failed:', error);
-      alert('Download failed. Please try again.');
+      alert(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

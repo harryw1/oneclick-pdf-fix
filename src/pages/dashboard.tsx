@@ -1,4 +1,4 @@
-import { FileText, Calendar, Download, Clock, ExternalLink } from 'lucide-react';
+import { FileText, Calendar, Download, Clock, ExternalLink, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import Layout from '@/components/Layout';
@@ -36,7 +36,7 @@ interface DashboardProps {
 }
 
 export default function DashboardPage({ profile: initialProfile }: DashboardProps) {
-  const [profile] = useState<UserProfile | null>(initialProfile);
+  const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [processingHistory, setProcessingHistory] = useState<ProcessingHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
@@ -70,9 +70,12 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
       const { data: { session } } = await supabase.auth.getSession();
       setAuthToken(session?.access_token || null);
       
-      // Fetch processing history if we have a token
+      // Fetch fresh data if we have a token
       if (session?.access_token) {
-        await fetchProcessingHistory(session.access_token);
+        await Promise.all([
+          fetchUserProfile(session.access_token),
+          fetchProcessingHistory(session.access_token)
+        ]);
       }
     };
     
@@ -84,12 +87,39 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
         window.location.href = '/';
       } else if (event === 'SIGNED_IN' && session) {
         setAuthToken(session.access_token);
-        await fetchProcessingHistory(session.access_token);
+        await Promise.all([
+          fetchUserProfile(session.access_token),
+          fetchProcessingHistory(session.access_token)
+        ]);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserProfile = async (token: string) => {
+    try {
+      const response = await fetch('/api/subscription', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setProfile({
+          id: profile?.id || '',
+          email: profile?.email || '',
+          plan: data.plan,
+          usage_this_week: data.usage_this_week,
+          total_pages_processed: data.total_pages_processed
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+    }
+  };
 
   const fetchProcessingHistory = async (token: string) => {
     try {
@@ -122,7 +152,9 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
       });
       
       if (!response.ok) {
-        throw new Error('Download failed');
+        const errorData = await response.text();
+        console.error('Download failed:', response.status, errorData);
+        throw new Error(`Download failed: ${response.status} - ${errorData}`);
       }
       
       const blob = await response.blob();
@@ -136,7 +168,7 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download failed:', error);
-      alert('Download failed. Please try again.');
+      alert(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -180,8 +212,14 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
               <p className="text-muted-foreground">Manage your PDF processing history</p>
             </div>
             <div className="flex items-center space-x-3">
+              <Button asChild>
+                <Link href="/upload">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload PDF
+                </Link>
+              </Button>
               {profile?.plan === 'free' ? (
-                <Button asChild>
+                <Button variant="outline" asChild>
                   <Link href="/pricing">Upgrade to Pro</Link>
                 </Button>
               ) : (
