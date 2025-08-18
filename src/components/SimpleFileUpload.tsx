@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Upload, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface SimpleFileUploadProps {
-  onFileSelect: (file: File) => void;
+  onFileSelect: (file: File) => Promise<void> | void;
   userPlan?: 'free' | 'pro_monthly' | 'pro_annual';
   disabled?: boolean;
 }
@@ -12,6 +12,7 @@ interface SimpleFileUploadProps {
 export default function SimpleFileUpload({ onFileSelect, userPlan = 'free', disabled = false }: SimpleFileUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const maxFileSize = (userPlan === 'pro_monthly' || userPlan === 'pro_annual') ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
   const maxFileSizeMB = maxFileSize / (1024 * 1024);
@@ -34,7 +35,7 @@ export default function SimpleFileUpload({ onFileSelect, userPlan = 'free', disa
     const file = acceptedFiles[0];
     if (file) {
       setSelectedFile(file);
-      onFileSelect(file);
+      // Don't auto-upload, wait for user to click Process
     }
   }, [onFileSelect, maxFileSizeMB]);
 
@@ -66,12 +67,29 @@ export default function SimpleFileUpload({ onFileSelect, userPlan = 'free', disa
         
         <div className="flex space-x-3">
           <Button 
+            onClick={async () => {
+              setIsUploading(true);
+              try {
+                await onFileSelect(selectedFile);
+              } catch (error) {
+                console.error('Upload error:', error);
+                setError(error instanceof Error ? error.message : 'Upload failed');
+              } finally {
+                setIsUploading(false);
+              }
+            }}
+            disabled={disabled || isUploading}
+            className="bg-primary-600 hover:bg-primary-700 text-white"
+          >
+            {isUploading ? 'Processing...' : 'Process PDF'}
+          </Button>
+          <Button 
             variant="outline" 
             onClick={() => {
               setSelectedFile(null);
               setError(null);
             }}
-            disabled={disabled}
+            disabled={disabled || isUploading}
           >
             Choose Different File
           </Button>
