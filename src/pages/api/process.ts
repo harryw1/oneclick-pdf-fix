@@ -259,14 +259,14 @@ export default async function handler(
         await userSupabase
           .from('processing_history')
           .insert({
-            id: processingId,
+            processing_id: processingId,
             user_id: user.id,
             original_filename: originalFileName,
-            processed_url: result.processedUrl,
             page_count: result.pageCount,
-            file_size: result.fileSize,
-            options,
-            processed_at: new Date().toISOString()
+            file_size_bytes: result.fileSize,
+            processing_options: options,
+            status: 'completed',
+            completed_at: new Date().toISOString()
           });
 
         res.status(200).json({ 

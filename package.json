@@ -48,6 +48,8 @@
     "eslint-config-next": "14.2.12"
   },
   "overrides": {
-    "eslint": "8.57.0"
+    "eslint": "8.57.0",
+    "rimraf": "^5.0.0",
+    "glob": "^10.0.0"
   }
 }
