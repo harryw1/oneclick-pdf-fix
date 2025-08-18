@@ -40,6 +40,7 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [processingHistory, setProcessingHistory] = useState<ProcessingHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   // Helper function to calculate file expiration
   const getFileExpiration = (createdAt: string) => {
@@ -97,8 +98,24 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
     return () => subscription.unsubscribe();
   }, []);
 
+  // Refresh data when user returns from processing
+  useEffect(() => {
+    const handleFocus = () => {
+      if (authToken) {
+        fetchUserProfile(authToken);
+        fetchProcessingHistory(authToken);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [authToken]);
+
   const fetchUserProfile = async (token: string) => {
+    if (profileLoading) return; // Prevent multiple simultaneous calls
+    
     try {
+      setProfileLoading(true);
       const response = await fetch('/api/subscription', {
         method: 'GET',
         headers: {
@@ -108,9 +125,11 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
       
       if (response.ok) {
         const data = await response.json();
+        // Get current user info from session to avoid circular dependency
+        const { data: { session } } = await createClient().auth.getSession();
         setProfile({
-          id: profile?.id || '',
-          email: profile?.email || '',
+          id: session?.user?.id || '',
+          email: session?.user?.email || '',
           plan: data.plan,
           usage_this_week: data.usage_this_week,
           total_pages_processed: data.total_pages_processed
@@ -118,6 +137,8 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
       }
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
+    } finally {
+      setProfileLoading(false);
     }
   };
 
