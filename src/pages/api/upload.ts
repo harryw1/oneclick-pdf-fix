@@ -17,6 +17,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export const config = {
   api: {
     bodyParser: false,
+    sizeLimit: '100mb',
   },
 };
 
