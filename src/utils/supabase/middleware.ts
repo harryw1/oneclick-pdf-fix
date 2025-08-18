@@ -31,9 +31,7 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  const {
-    data: { user: _user },
-  } = await supabase.auth.getUser()
+  await supabase.auth.getUser()
 
   // For now, don't redirect to avoid infinite loops
   // Let AuthWrapper handle authentication requirements

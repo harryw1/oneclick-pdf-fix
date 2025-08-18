@@ -37,7 +37,7 @@ export default function SimpleFileUpload({ onFileSelect, userPlan = 'free', disa
       setSelectedFile(file);
       // Don't auto-upload, wait for user to click Process
     }
-  }, [onFileSelect, maxFileSizeMB]);
+  }, [maxFileSizeMB]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
