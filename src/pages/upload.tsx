@@ -58,7 +58,7 @@ export default function UploadPage() {
         try {
           const errorData = await uploadResponse.json();
           errorMessage = errorData.error || errorMessage;
-        } catch (jsonError) {
+        } catch {
           // Handle non-JSON responses (like 413 errors)
           const errorText = await uploadResponse.text();
           if (uploadResponse.status === 413) {

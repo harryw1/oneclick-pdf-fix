@@ -1,5 +1,5 @@
 import { FileText, Calendar, Download, Clock, ExternalLink, Upload } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
@@ -41,6 +41,57 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
   const [processingHistory, setProcessingHistory] = useState<ProcessingHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+
+  const fetchUserProfile = useCallback(async (token: string) => {
+    if (profileLoading) return; // Prevent multiple simultaneous calls
+    
+    try {
+      setProfileLoading(true);
+      const response = await fetch('/api/subscription', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Get current user info from session to avoid circular dependency
+        const { data: { session } } = await createClient().auth.getSession();
+        setProfile({
+          id: session?.user?.id || '',
+          email: session?.user?.email || '',
+          plan: data.plan,
+          usage_this_week: data.usage_this_week,
+          total_pages_processed: data.total_pages_processed
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [profileLoading]);
+
+  const fetchProcessingHistory = useCallback(async (token: string) => {
+    try {
+      setHistoryLoading(true);
+      const response = await fetch('/api/processing-history', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setProcessingHistory(data.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch processing history:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
 
   // Helper function to calculate file expiration
   const getFileExpiration = (createdAt: string) => {
@@ -96,7 +147,7 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchUserProfile, fetchProcessingHistory]);
 
   // Refresh data when user returns from processing
   useEffect(() => {
@@ -109,58 +160,8 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
 
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [authToken]);
+  }, [authToken, fetchUserProfile, fetchProcessingHistory]);
 
-  const fetchUserProfile = async (token: string) => {
-    if (profileLoading) return; // Prevent multiple simultaneous calls
-    
-    try {
-      setProfileLoading(true);
-      const response = await fetch('/api/subscription', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Get current user info from session to avoid circular dependency
-        const { data: { session } } = await createClient().auth.getSession();
-        setProfile({
-          id: session?.user?.id || '',
-          email: session?.user?.email || '',
-          plan: data.plan,
-          usage_this_week: data.usage_this_week,
-          total_pages_processed: data.total_pages_processed
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch user profile:', error);
-    } finally {
-      setProfileLoading(false);
-    }
-  };
-
-  const fetchProcessingHistory = async (token: string) => {
-    try {
-      setHistoryLoading(true);
-      const response = await fetch('/api/processing-history', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setProcessingHistory(data.data || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch processing history:', error);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
 
   const handleDownload = async (processingId: string, originalFilename: string) => {
     if (!authToken) return;
