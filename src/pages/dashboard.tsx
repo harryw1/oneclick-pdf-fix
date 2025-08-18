@@ -111,6 +111,35 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
     }
   };
 
+  const handleDownload = async (processingId: string, originalFilename: string) => {
+    if (!authToken) return;
+    
+    try {
+      const response = await fetch(`/api/download/${processingId}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${originalFilename}_fixed.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert('Download failed. Please try again.');
+    }
+  };
+
 
   const handleManageSubscription = async () => {
     if (!authToken) return;
@@ -273,11 +302,13 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
                           {item.status === 'completed' && (
                             <>
                               {!expiration.expired ? (
-                                <Button size="sm" variant="outline" asChild>
-                                  <a href={`/api/download/${item.processingId}`} download>
-                                    <Download className="h-3 w-3 mr-1" />
-                                    Download
-                                  </a>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => handleDownload(item.processingId, item.originalFilename)}
+                                >
+                                  <Download className="h-3 w-3 mr-1" />
+                                  Download
                                 </Button>
                               ) : (
                                 <Button size="sm" variant="outline" disabled>

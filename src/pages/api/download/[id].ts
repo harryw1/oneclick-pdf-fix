@@ -2,6 +2,10 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { setSecurityHeaders, validateProcessingId } from '@/utils/security';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export default async function handler(
   req: NextApiRequest,
@@ -24,6 +28,47 @@ export default async function handler(
   if (!validateProcessingId(id)) {
     console.warn('Invalid processing ID format attempted:', id);
     return res.status(400).json({ error: 'Invalid processing ID format' });
+  }
+
+  // SECURITY: Authenticate user and verify ownership
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing or invalid authorization header' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  
+  // Create authenticated supabase client
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  });
+
+  // Get current user
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  
+  if (userError || !user) {
+    return res.status(401).json({ error: 'Invalid authentication' });
+  }
+
+  // Verify user owns this processing record
+  const { data: processingRecord, error: recordError } = await supabase
+    .from('processing_history')
+    .select('id, user_id, status')
+    .eq('processing_id', id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (recordError || !processingRecord) {
+    console.warn('Processing record not found or access denied:', { processingId: id, userId: user.id });
+    return res.status(404).json({ error: 'File not found or access denied' });
+  }
+
+  if (processingRecord.status !== 'completed') {
+    return res.status(400).json({ error: 'File processing not completed' });
   }
 
   // SECURITY: Sanitize the ID and construct safe file path

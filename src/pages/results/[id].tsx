@@ -32,6 +32,7 @@ export default function ResultsPage() {
   const [result, setResult] = useState<ProcessedPDF | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const router = useRouter();
   const { id } = router.query;
   const supabase = createClient();
@@ -44,6 +45,8 @@ export default function ResultsPage() {
         router.push('/auth');
         return;
       }
+
+      setAuthToken(session.access_token);
 
       // Check if result exists in processing history
       const processingId = Array.isArray(id) ? id[0] : id;
@@ -94,6 +97,35 @@ export default function ResultsPage() {
       checkAuthAndResult();
     }
   }, [id, router, supabase]);
+
+  const handleDownload = async () => {
+    if (!authToken || !result) return;
+    
+    try {
+      const response = await fetch(result.downloadUrl, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${result.originalName}_fixed.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert('Download failed. Please try again.');
+    }
+  };
 
   if (loading) {
     return (
@@ -182,11 +214,9 @@ export default function ResultsPage() {
                   {result.options?.deskew && <Badge variant="outline">Deskewed</Badge>}
                 </div>
               </div>
-              <Button asChild size="lg" className="shadow-lg">
-                <a href={result.downloadUrl} download>
-                  <Download className="h-4 w-4 mr-2" />
-                  Download PDF
-                </a>
+              <Button onClick={handleDownload} size="lg" className="shadow-lg">
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
               </Button>
             </div>
           </CardContent>
