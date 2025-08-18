@@ -4,10 +4,12 @@
       "maxDuration": 120
     },
     "src/pages/api/process.ts": {
-      "maxDuration": 120
+      "maxDuration": 120,
+      "maxRequestBodySize": "100mb"
     },
     "src/pages/api/upload.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "maxRequestBodySize": "100mb"
     }
   },
   "build": {

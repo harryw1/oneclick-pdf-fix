@@ -292,7 +292,7 @@ export async function processDocument(params: {
   const newUsage = profile.usage_this_week + pageCount;
   const newTotal = profile.total_pages_processed + pageCount;
   
-  await userSupabase
+  const { error: updateError } = await userSupabase
     .from('profiles')
     .update({ 
       usage_this_week: newUsage,
@@ -300,6 +300,12 @@ export async function processDocument(params: {
       updated_at: new Date().toISOString()
     })
     .eq('id', userId);
+
+  if (updateError) {
+    console.error('Failed to update user usage statistics:', updateError);
+  } else {
+    console.log(`Updated usage statistics: ${newUsage} pages this week, ${newTotal} total pages`);
+  }
 
   console.log(`Processing completed for ${processingId}: ${pageCount} pages processed`);
   return result;

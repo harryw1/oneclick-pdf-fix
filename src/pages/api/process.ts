@@ -150,7 +150,7 @@ export default async function handler(
       const newTotal = profile.total_pages_processed + result.pageCount;
       const newUsageThisMonth = (profile.usage_this_month || 0) + result.pageCount;
       
-      await userSupabase
+      const { error: updateError } = await userSupabase
         .from('profiles')
         .update({ 
           usage_this_week: newUsage,
@@ -159,6 +159,12 @@ export default async function handler(
           updated_at: new Date().toISOString()
         })
         .eq('id', user.id);
+
+      if (updateError) {
+        console.error('Failed to update user usage statistics in process.ts:', updateError);
+      } else {
+        console.log(`Updated usage statistics in process.ts: ${newUsage} pages this week, ${newTotal} total pages`);
+      }
 
       // Add processing record to history
       await userSupabase
@@ -246,7 +252,7 @@ export default async function handler(
         const newUsage = profile.usage_this_week + result.pageCount;
         const newTotal = profile.total_pages_processed + result.pageCount;
         
-        await userSupabase
+        const { error: updateError } = await userSupabase
           .from('profiles')
           .update({ 
             usage_this_week: newUsage,
@@ -254,6 +260,12 @@ export default async function handler(
             updated_at: new Date().toISOString()
           })
           .eq('id', user.id);
+
+        if (updateError) {
+          console.error('Failed to update user usage statistics for free user:', updateError);
+        } else {
+          console.log(`Updated usage statistics for free user: ${newUsage} pages this week, ${newTotal} total pages`);
+        }
 
         // Add processing record to history
         await userSupabase

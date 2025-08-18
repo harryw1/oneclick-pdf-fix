@@ -53,8 +53,22 @@ export default function UploadPage() {
       });
 
       if (!uploadResponse.ok) {
-        const errorData = await uploadResponse.json();
-        throw new Error(errorData.error || 'Upload failed');
+        let errorMessage = 'Upload failed';
+        
+        try {
+          const errorData = await uploadResponse.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (jsonError) {
+          // Handle non-JSON responses (like 413 errors)
+          const errorText = await uploadResponse.text();
+          if (uploadResponse.status === 413) {
+            errorMessage = 'File too large. Please upload a smaller PDF (max 100MB).';
+          } else {
+            errorMessage = `Upload failed (${uploadResponse.status}): ${errorText.substring(0, 100)}`;
+          }
+        }
+        
+        throw new Error(errorMessage);
       }
 
       const uploadResult = await uploadResponse.json();
