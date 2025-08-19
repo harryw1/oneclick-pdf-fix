@@ -1,6 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { promises as fs } from 'fs';
-import path from 'path';
 import { setSecurityHeaders, validateProcessingId } from '@/utils/security';
 import { createClient } from '@supabase/supabase-js';
 
@@ -54,10 +52,10 @@ export default async function handler(
     return res.status(401).json({ error: 'Invalid authentication' });
   }
 
-  // Verify user owns this processing record
+  // Verify user owns this processing record and get the processed file URL
   const { data: processingRecord, error: recordError } = await supabase
     .from('processing_history')
-    .select('id, user_id, status')
+    .select('id, user_id, status, processed_file_url, original_filename')
     .eq('processing_id', id)
     .eq('user_id', user.id)
     .single();
@@ -71,52 +69,40 @@ export default async function handler(
     return res.status(400).json({ error: 'File processing not completed' });
   }
 
-  // SECURITY: Sanitize the ID and construct safe file path
-  const sanitizedId = id.replace(/[^a-zA-Z0-9_]/g, '');
-  const filePath = path.join('/tmp', `${sanitizedId}_processed.pdf`);
-  
-  // SECURITY: Ensure file path is within expected directory
-  const resolvedPath = path.resolve(filePath);
-  if (!resolvedPath.startsWith('/tmp/')) {
-    console.warn('Path traversal attempt detected:', filePath);
-    return res.status(400).json({ error: 'Invalid file path' });
+  // Check if processed file URL exists
+  if (!processingRecord.processed_file_url) {
+    console.warn('No processed file URL found for processing ID:', id);
+    return res.status(404).json({ error: 'Processed file not available' });
   }
 
   try {
-    console.log('Looking for file at:', filePath);
+    console.log('Fetching processed file from Blob storage:', processingRecord.processed_file_url);
     
-    // Check if file exists
-    try {
-      await fs.access(filePath);
-      console.log('File found, preparing download...');
-    } catch (error) {
-      console.log('File not found:', error);
+    // Fetch the processed file from Vercel Blob
+    const blobResponse = await fetch(processingRecord.processed_file_url);
+    
+    if (!blobResponse.ok) {
+      console.error('Failed to fetch file from Blob storage:', blobResponse.status, blobResponse.statusText);
       return res.status(404).json({ error: 'File not found or expired' });
     }
 
-    // Read file
-    let fileBuffer, stats;
-    try {
-      fileBuffer = await fs.readFile(filePath);
-      stats = await fs.stat(filePath);
-      console.log('File read successfully, size:', stats.size);
-    } catch (error) {
-      console.error('Failed to read file:', error);
-      return res.status(500).json({ error: 'Failed to read processed file' });
-    }
+    const fileBuffer = await blobResponse.arrayBuffer();
+    console.log('File fetched successfully, size:', fileBuffer.byteLength);
+
+    // Generate a clean filename based on original filename
+    const originalName = processingRecord.original_filename || 'document';
+    const cleanName = originalName.replace(/\.[^/.]+$/, ''); // Remove extension
+    const downloadFilename = `${cleanName}_fixed.pdf`;
 
     // Set headers for PDF download
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${id}_fixed.pdf"`);
-    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadFilename}"`);
+    res.setHeader('Content-Length', fileBuffer.byteLength);
     res.setHeader('Cache-Control', 'no-cache');
 
     // Send file
-    res.status(200).send(fileBuffer);
+    res.status(200).send(Buffer.from(fileBuffer));
     console.log('File sent successfully');
-
-    // Note: Files are now kept for 24 hours and cleaned up by cron job
-    // No immediate cleanup after download to allow redownloads
     
   } catch (error) {
     console.error('Download error:', error);

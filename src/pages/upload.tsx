@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { upload } from '@vercel/blob/client';
 import { createClient } from '@/utils/supabase/client';
 import Layout from '@/components/Layout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,7 +44,7 @@ export default function UploadPage() {
       console.log('=== STARTING BLOB UPLOAD ===');
       console.log('File:', file.name, 'Size:', file.size, 'Type:', file.type);
 
-      // Step 1: Get upload URL from our API
+      // Get user session for authentication
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       
@@ -51,53 +52,26 @@ export default function UploadPage() {
         throw new Error('Authentication required. Please sign in again.');
       }
 
-      console.log('Getting upload URL...');
-      const urlResponse = await fetch('/api/upload-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          filename: file.name,
-          fileSize: file.size,
-          contentType: file.type
-        })
-      });
-
-      if (!urlResponse.ok) {
-        const errorData = await urlResponse.json();
-        throw new Error(errorData.message || errorData.error || 'Failed to get upload URL');
-      }
-
-      const { processingId, uploadUrl } = await urlResponse.json();
-      console.log('Got processing ID:', processingId);
-      console.log('Got upload URL:', uploadUrl);
-
-      // Step 2: Upload directly to our blob endpoint using PUT request
-      console.log('Uploading file to Blob storage...');
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
-      });
-
-      if (!uploadResponse.ok) {
-        console.error('Blob upload failed:', uploadResponse.status, uploadResponse.statusText);
-        const errorText = await uploadResponse.text();
-        console.error('Error response:', errorText);
-        throw new Error(`File upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
-      }
-
-      const uploadResult = await uploadResponse.json();
-      console.log('✅ File uploaded successfully to Blob storage');
-      console.log('Upload result:', uploadResult);
+      // Generate unique processing ID
+      const processingId = `pdf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Step 3: Store info for processing page and redirect
-      // Use the actual blob URL from the upload response
-      sessionStorage.setItem(`blob_${processingId}`, uploadResult.blobUrl);
+      // Upload directly to Vercel Blob using client-side upload
+      console.log('Uploading file to Vercel Blob...');
+      const blob = await upload(`${processingId}.pdf`, file, {
+        access: 'public',
+        handleUploadUrl: '/api/blob/upload',
+        clientPayload: JSON.stringify({
+          userId: session.data.session?.user.id,
+          processingId: processingId,
+          originalFileName: file.name
+        }),
+      });
+
+      console.log('✅ File uploaded successfully to Blob storage');
+      console.log('Blob result:', blob);
+      
+      // Store info for processing page and redirect
+      sessionStorage.setItem(`blob_${processingId}`, blob.url);
       sessionStorage.setItem(`filename_${processingId}`, file.name);
       
       // Redirect to processing page
