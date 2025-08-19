@@ -14,7 +14,8 @@ export default function SimpleFileUpload({ onFileSelect, userPlan = 'free', disa
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const maxFileSize = (userPlan === 'pro_monthly' || userPlan === 'pro_annual') ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+  // Updated file size limits to match backend: 100MB for Pro, 50MB for free users
+  const maxFileSize = (userPlan === 'pro_monthly' || userPlan === 'pro_annual') ? 100 * 1024 * 1024 : 50 * 1024 * 1024;
   const maxFileSizeMB = maxFileSize / (1024 * 1024);
 
   const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: FileRejection[]) => {

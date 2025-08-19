@@ -1,7 +1,4 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import formidable from 'formidable';
-import { promises as fs } from 'fs';
-import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { setSecurityHeaders } from '@/utils/security';
 
@@ -64,100 +61,17 @@ export default async function handler(
     .eq('id', user.id)
     .single();
 
-  // NOTE: This endpoint is now legacy - new uploads use Blob storage
-  console.log('Legacy upload endpoint accessed - user should use Blob storage');
+  // DEPRECATED: This endpoint is legacy - redirect to blob storage
+  console.warn('DEPRECATED: Legacy upload endpoint accessed - redirecting to blob storage');
   console.log('User ID:', user.id, 'Plan:', profile?.plan || 'free');
+  
+  return res.status(410).json({
+    error: 'Endpoint deprecated',
+    message: 'This upload endpoint is no longer supported. Please use the blob storage upload endpoint.',
+    redirectTo: '/api/blob/upload',
+    upgrade: true
+  });
 
-  try {
-    // Set maxFileSize based on user tier - default to free if profile not found
-    const userPlan = profile?.plan || 'free';
-    const maxFileSize = (userPlan === 'pro_monthly' || userPlan === 'pro_annual') ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
-    
-    const form = formidable({
-      uploadDir: '/tmp',
-      keepExtensions: true,
-      maxFileSize: maxFileSize,
-      maxFields: 1,
-      maxFiles: 1,
-      filter: ({ mimetype, originalFilename }) => {
-        // SECURITY: Enhanced file validation
-        if (mimetype !== 'application/pdf') return false;
-        if (!originalFilename) return false;
-        
-        // Check file extension
-        const ext = path.extname(originalFilename).toLowerCase();
-        if (ext !== '.pdf') return false;
-        
-        // Check for dangerous characters in filename
-        if (/[<>:"/\|?*\x00-\x1f]/.test(originalFilename)) return false;
-        
-        return true;
-      },
-    });
-
-    let files;
-    try {
-      const [, parsedFiles] = await form.parse(req);
-      files = parsedFiles;
-    } catch (formError: unknown) {
-      console.error('Formidable parsing error:', formError);
-      const errorCode = formError && typeof formError === 'object' && 'code' in formError ? formError.code : null;
-      const errorMessage = formError instanceof Error ? formError.message : String(formError);
-      console.error('Error code:', errorCode);
-      console.error('Error message:', errorMessage);
-      
-      if (errorCode === 'LIMIT_FILE_SIZE' || 
-          errorMessage?.includes('maxFileSize') || 
-          errorMessage?.includes('too large')) {
-        return res.status(413).json({ 
-          error: 'File too large',
-          message: `File size exceeds ${(userPlan === 'pro_monthly' || userPlan === 'pro_annual') ? '100MB' : '10MB'} limit. ${userPlan === 'free' ? 'Upgrade to Pro for 100MB files.' : ''}`,
-          userPlan,
-          maxFileSizeMB: maxFileSize / (1024 * 1024),
-          actualErrorCode: errorCode,
-          actualErrorMessage: errorMessage
-        });
-      }
-      throw formError;
-    }
-    
-    const file = Array.isArray(files.file) ? files.file[0] : files.file;
-
-    if (!file) {
-      return res.status(400).json({ error: 'No PDF file uploaded' });
-    }
-
-    console.log('File uploaded successfully:');
-    console.log('- Name:', file.originalFilename);
-    console.log('- Size (bytes):', file.size);
-    console.log('- Size (MB):', (file.size / (1024 * 1024)).toFixed(2));
-    console.log('- MIME type:', file.mimetype);
-
-    // Generate unique processing ID
-    const processingId = `pdf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Store file path temporarily
-    const tempPath = `/tmp/${processingId}.pdf`;
-    await fs.copyFile(file.filepath, tempPath);
-    
-    // Clean up original upload
-    await fs.unlink(file.filepath);
-
-    res.status(200).json({
-      processingId,
-      originalName: file.originalFilename,
-      fileSize: file.size,
-      message: 'File uploaded successfully'
-    });
-  } catch (error) {
-    console.error('Upload error:', error);
-    
-    // Ensure we always send valid JSON
-    if (!res.headersSent) {
-      res.status(500).json({ 
-        error: 'Failed to upload file',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  }
+  // Legacy code commented out - all uploads now use Vercel Blob
+  // ... (formidable upload code removed for clarity)
 }

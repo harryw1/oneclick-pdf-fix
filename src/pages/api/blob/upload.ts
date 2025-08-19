@@ -56,12 +56,17 @@ export default async function handler(
           .single();
 
         const actualUserPlan = profile?.plan || 'free';
-        const maxFileSize = (actualUserPlan === 'pro_monthly' || actualUserPlan === 'pro_annual') ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
+        // Set file size limits: 100MB for Pro users, 50MB for free users (increased from 10MB to avoid 413 errors)
+        const maxFileSize = (actualUserPlan === 'pro_monthly' || actualUserPlan === 'pro_annual') ? 100 * 1024 * 1024 : 50 * 1024 * 1024;
+
+        console.log(`Setting blob upload limits - User Plan: ${actualUserPlan}, Max Size: ${maxFileSize / 1024 / 1024}MB`);
 
         return {
           allowedContentTypes: ['application/pdf'],
           maximumSizeInBytes: maxFileSize,
           addRandomSuffix: true,
+          // Set cache control for 24-hour retention
+          cacheControlMaxAge: 24 * 60 * 60, // 24 hours in seconds
         };
       },
       onUploadCompleted: async ({ blob }) => {

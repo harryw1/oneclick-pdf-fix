@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createClient } from '@supabase/supabase-js';
-import { processDocument } from '@/utils/pdf-processor';
+import { processDocument } from '@/utils/vision-pdf-processor';
 import { processRateLimit, checkRateLimit } from '@/utils/rate-limit';
 import { setSecurityHeaders, validateProcessingId, sanitizeInput } from '@/utils/security';
 import type { PDFProcessingOptions } from '@/types/pdf';

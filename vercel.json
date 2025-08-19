@@ -6,6 +6,9 @@
     "src/pages/api/process.ts": {
       "maxDuration": 120
     },
+    "src/pages/api/blob/upload.ts": {
+      "maxDuration": 60
+    },
     "src/pages/api/upload.ts": {
       "maxDuration": 60
     }
@@ -17,10 +20,6 @@
     }
   },
   "crons": [
-    {
-      "path": "/api/process-queue",
-      "schedule": "*/5 * * * *"
-    },
     {
       "path": "/api/cleanup-files",
       "schedule": "0 * * * *"

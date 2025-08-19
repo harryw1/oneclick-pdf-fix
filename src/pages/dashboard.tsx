@@ -1,4 +1,4 @@
-import { FileText, Calendar, Download, Clock, ExternalLink, Upload } from 'lucide-react';
+import { FileText, Calendar, Download, Clock, ExternalLink, Upload, TrendingUp } from 'lucide-react';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import Layout from '@/components/Layout';
@@ -6,12 +6,14 @@ import Link from 'next/link';
 import { GetServerSideProps } from 'next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import ProcessingProgress from '@/components/ProcessingProgress';
 
 interface UserProfile {
   id: string;
   email: string;
   plan: 'free' | 'pro_monthly' | 'pro_annual';
   usage_this_week: number;
+  usage_this_month: number;
   total_pages_processed: number;
 }
 
@@ -45,6 +47,7 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
   const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [processingHistory, setProcessingHistory] = useState<ProcessingHistoryItem[]>([]);
+  const [, setHasActiveProcessing] = useState(false);
   
   // Simple loading states for UI (not used in dependencies)
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
@@ -107,6 +110,7 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
           email: session?.user?.email || '',
           plan: data.plan,
           usage_this_week: data.usage_this_week,
+          usage_this_month: data.usage_this_month || data.usage_this_week,
           total_pages_processed: data.total_pages_processed
         };
         
@@ -365,8 +369,14 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
             </div>
           </div>
 
+          {/* Real-time Processing Status */}
+          <ProcessingProgress 
+            authToken={authToken} 
+            onStatusChange={setHasActiveProcessing}
+          />
+
           {/* Usage Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center">
@@ -378,7 +388,7 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
                       <p className="text-2xl font-bold text-foreground">
                         {(profile?.plan === 'pro_monthly' || profile?.plan === 'pro_annual') ? 
                           (profile?.usage_this_week || 0) : 
-                          `${profile?.usage_this_week || 0} / 5`}
+                          `${profile?.usage_this_week || 0} / 10`}
                       </p>
                     </div>
                   </div>
@@ -394,6 +404,24 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
                       <p className="text-2xl font-bold text-foreground">
                         {profile?.plan === 'pro_monthly' ? 'Pro Monthly' : 
                          profile?.plan === 'pro_annual' ? 'Pro Annual' : 'Free'}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <TrendingUp className="h-8 w-8 text-purple-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        {(profile?.plan === 'pro_monthly' || profile?.plan === 'pro_annual') ? 'Pages This Month' : 'Pages This Month'}
+                      </p>
+                      <p className="text-2xl font-bold text-foreground">
+                        {(profile?.plan === 'pro_monthly' || profile?.plan === 'pro_annual') ? 
+                          (profile?.usage_this_month || 0) : 
+                          `${profile?.usage_this_month || 0} / 10`}
                       </p>
                     </div>
                   </div>
@@ -559,6 +587,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     email: user.email!,
     plan: profile.plan || 'free',
     usage_this_week: profile.usage_this_week || 0,
+    usage_this_month: profile.usage_this_month || 0,
     total_pages_processed: profile.total_pages_processed || 0
   } : null;
 
