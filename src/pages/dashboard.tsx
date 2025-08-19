@@ -1,5 +1,5 @@
 import { FileText, Calendar, Download, Clock, ExternalLink, Upload } from 'lucide-react';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import Layout from '@/components/Layout';
 import Link from 'next/link';
@@ -27,6 +27,12 @@ interface ProcessingHistoryItem {
   processingOptions: Record<string, unknown>;
 }
 
+interface CachedData<T> {
+  data: T | null;
+  timestamp: number;
+  isLoading: boolean;
+}
+
 interface DashboardProps {
   user: {
     id: string;
@@ -39,58 +45,115 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
   const [profile, setProfile] = useState<UserProfile | null>(initialProfile);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [processingHistory, setProcessingHistory] = useState<ProcessingHistoryItem[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [profileLoading, setProfileLoading] = useState(false);
+  
+  // Simple loading states for UI (not used in dependencies)
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  
+  // Use refs for caching and loading states to avoid dependency loops
+  const profileCache = useRef<CachedData<UserProfile>>({
+    data: initialProfile,
+    timestamp: Date.now(),
+    isLoading: false
+  });
+  
+  const historyCache = useRef<CachedData<ProcessingHistoryItem[]>>({
+    data: [],
+    timestamp: 0,
+    isLoading: false
+  });
+  
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const fetchUserProfile = useCallback(async (token: string) => {
-    // Use a local variable to prevent infinite loops
-    let isLoading = false;
+  // Stable function references with proper caching
+  const fetchUserProfile = useCallback(async (token: string, forceRefresh = false) => {
+    const now = Date.now();
+    const CACHE_DURATION = 30000; // 30 seconds
     
-    return new Promise<void>((resolve) => {
-      if (isLoading || profileLoading) {
-        resolve();
-        return;
-      }
-      
-      isLoading = true;
-      setProfileLoading(true);
-      
-      fetch('/api/subscription', {
+    // Check if we have valid cached data
+    if (!forceRefresh && 
+        profileCache.current.data && 
+        (now - profileCache.current.timestamp) < CACHE_DURATION) {
+      return;
+    }
+    
+    // Prevent concurrent requests
+    if (profileCache.current.isLoading) {
+      return;
+    }
+    
+    // Cancel any existing request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    abortControllerRef.current = new AbortController();
+    profileCache.current.isLoading = true;
+    setIsProfileLoading(true);
+    
+    try {
+      const response = await fetch('/api/subscription', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
-        }
-      })
-      .then(async (response) => {
-        if (response.ok) {
-          const data = await response.json();
-          // Get current user info from session to avoid circular dependency
-          const { data: { session } } = await createClient().auth.getSession();
-          setProfile({
-            id: session?.user?.id || '',
-            email: session?.user?.email || '',
-            plan: data.plan,
-            usage_this_week: data.usage_this_week,
-            total_pages_processed: data.total_pages_processed
-          });
-        } else {
-          console.error('Failed to fetch user profile:', response.status, response.statusText);
-        }
-      })
-      .catch((error) => {
-        console.error('Failed to fetch user profile:', error);
-      })
-      .finally(() => {
-        setProfileLoading(false);
-        isLoading = false;
-        resolve();
+        },
+        signal: abortControllerRef.current.signal
       });
-    });
-  }, [profileLoading]); // Include profileLoading dependency
+      
+      if (response.ok) {
+        const data = await response.json();
+        const { data: { session } } = await createClient().auth.getSession();
+        
+        const newProfile: UserProfile = {
+          id: session?.user?.id || '',
+          email: session?.user?.email || '',
+          plan: data.plan,
+          usage_this_week: data.usage_this_week,
+          total_pages_processed: data.total_pages_processed
+        };
+        
+        // Update cache and state
+        profileCache.current = {
+          data: newProfile,
+          timestamp: now,
+          isLoading: false
+        };
+        
+        setProfile(newProfile);
+      } else {
+        console.error('Failed to fetch user profile:', response.status, response.statusText);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Failed to fetch user profile:', error);
+      }
+    } finally {
+      profileCache.current.isLoading = false;
+      setIsProfileLoading(false);
+      abortControllerRef.current = null;
+    }
+  }, []); // Stable reference with no dependencies
 
-  const fetchProcessingHistory = useCallback(async (token: string) => {
+  const fetchProcessingHistory = useCallback(async (token: string, forceRefresh = false) => {
+    const now = Date.now();
+    const CACHE_DURATION = 15000; // 15 seconds for more frequent updates
+    
+    // Check if we have valid cached data
+    if (!forceRefresh && 
+        historyCache.current.data && 
+        (now - historyCache.current.timestamp) < CACHE_DURATION) {
+      return;
+    }
+    
+    // Prevent concurrent requests
+    if (historyCache.current.isLoading) {
+      return;
+    }
+    
+    historyCache.current.isLoading = true;
+    setIsHistoryLoading(true);
+    
     try {
-      setHistoryLoading(true);
       const response = await fetch('/api/processing-history', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -99,14 +162,26 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
       
       if (response.ok) {
         const data = await response.json();
-        setProcessingHistory(data.data || []);
+        const historyData = data.data || [];
+        
+        // Update cache and state
+        historyCache.current = {
+          data: historyData,
+          timestamp: now,
+          isLoading: false
+        };
+        
+        setProcessingHistory(historyData);
+      } else {
+        console.error('Failed to fetch processing history:', response.status);
       }
     } catch (error) {
       console.error('Failed to fetch processing history:', error);
     } finally {
-      setHistoryLoading(false);
+      historyCache.current.isLoading = false;
+      setIsHistoryLoading(false);
     }
-  }, []);
+  }, []); // Stable reference with no dependencies
 
   // Helper function to calculate file expiration
   const getFileExpiration = (createdAt: string) => {
@@ -129,53 +204,67 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
     }
   };
 
+  // Initial data fetch - stable, no dependencies
   useEffect(() => {
     const supabase = createClient();
     
-    // Get initial session token
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setAuthToken(session?.access_token || null);
+      const token = session?.access_token || null;
+      setAuthToken(token);
       
-      // Fetch fresh data if we have a token
-      if (session?.access_token) {
+      // Fetch initial data if we have a token
+      if (token) {
         await Promise.all([
-          fetchUserProfile(session.access_token),
-          fetchProcessingHistory(session.access_token)
+          fetchUserProfile(token),
+          fetchProcessingHistory(token)
         ]);
       }
     };
     
     getSession();
-
-    // Listen for auth state changes (for sign out only)
+  }, []); // Only run once on mount
+  
+  // Auth state listener - separate effect for clarity
+  useEffect(() => {
+    const supabase = createClient();
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
         window.location.href = '/';
       } else if (event === 'SIGNED_IN' && session) {
         setAuthToken(session.access_token);
+        // Force refresh on sign in
         await Promise.all([
-          fetchUserProfile(session.access_token),
-          fetchProcessingHistory(session.access_token)
+          fetchUserProfile(session.access_token, true),
+          fetchProcessingHistory(session.access_token, true)
         ]);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchUserProfile, fetchProcessingHistory]);
+  }, []); // Stable reference, no dependencies
 
-  // Refresh data when user returns from processing with debouncing
+  // Window focus handler with proper debouncing and caching
   useEffect(() => {
     let debounceTimer: NodeJS.Timeout;
+    let lastFocusTime = 0;
     
     const handleFocus = () => {
-      if (authToken && !profileLoading && !historyLoading) {
-        // Debounce rapid focus events
+      const now = Date.now();
+      // Only refresh if it's been more than 30 seconds since last focus refresh
+      if (now - lastFocusTime < 30000) {
+        return;
+      }
+      
+      const currentToken = authToken;
+      if (currentToken && !profileCache.current.isLoading && !historyCache.current.isLoading) {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-          fetchUserProfile(authToken);
-          fetchProcessingHistory(authToken);
-        }, 1000); // 1 second debounce
+          lastFocusTime = now;
+          fetchUserProfile(currentToken);
+          fetchProcessingHistory(currentToken);
+        }, 2000); // 2 second debounce for less aggressive refreshing
       }
     };
 
@@ -184,7 +273,7 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
       window.removeEventListener('focus', handleFocus);
       clearTimeout(debounceTimer);
     };
-  }, [authToken, fetchUserProfile, fetchProcessingHistory, profileLoading, historyLoading]);
+  }, [authToken]); // Only depend on authToken, which is stable
 
 
   const handleDownload = async (processingId: string, originalFilename: string) => {
@@ -332,7 +421,7 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
               </div>
               
               <div className="p-6">
-                {historyLoading ? (
+                {isHistoryLoading ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600 mx-auto mb-2"></div>
                     <p className="text-sm text-muted-foreground">Loading recent files...</p>
