@@ -62,7 +62,7 @@ export default async function handler(
     console.log('Uploading to Blob storage with filename:', filename);
     
     const blob = await put(filename, fileBuffer, {
-      access: 'private',
+      access: 'public',
       contentType: 'application/pdf',
     });
 
