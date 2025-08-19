@@ -55,7 +55,7 @@ export default async function handler(
   // Verify user owns this processing record and get the processed file URL
   const { data: processingRecord, error: recordError } = await supabase
     .from('processing_history')
-    .select('id, user_id, status, processed_file_url, original_filename')
+    .select('id, user_id, status, processed_url, original_filename')
     .eq('processing_id', id)
     .eq('user_id', user.id)
     .single();
@@ -70,16 +70,16 @@ export default async function handler(
   }
 
   // Check if processed file URL exists
-  if (!processingRecord.processed_file_url) {
+  if (!processingRecord.processed_url) {
     console.warn('No processed file URL found for processing ID:', id);
     return res.status(404).json({ error: 'Processed file not available' });
   }
 
   try {
-    console.log('Fetching processed file from Blob storage:', processingRecord.processed_file_url);
+    console.log('Fetching processed file from Blob storage:', processingRecord.processed_url);
     
     // Fetch the processed file from Vercel Blob
-    const blobResponse = await fetch(processingRecord.processed_file_url);
+    const blobResponse = await fetch(processingRecord.processed_url);
     
     if (!blobResponse.ok) {
       console.error('Failed to fetch file from Blob storage:', blobResponse.status, blobResponse.statusText);

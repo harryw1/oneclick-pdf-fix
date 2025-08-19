@@ -60,7 +60,7 @@ export default function ResultsPage() {
       try {
         const { data: historyRecord } = await supabase
           .from('processing_history')
-          .select('*')
+          .select('id, processing_id, original_filename, page_count, file_size_bytes, processing_options, status, document_type, confidence_score, processing_duration_ms, processed_url, created_at, completed_at')
           .eq('processing_id', processingId)
           .eq('user_id', session.user.id)
           .single();

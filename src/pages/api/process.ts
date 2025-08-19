@@ -171,7 +171,7 @@ export default async function handler(
           page_count: result.pageCount,
           file_size_bytes: result.fileSize,
           processing_options: options,
-          processed_file_url: result.processedUrl,
+          processed_url: result.processedUrl,
           status: 'completed',
           completed_at: new Date().toISOString()
         });
@@ -276,7 +276,7 @@ export default async function handler(
             page_count: result.pageCount,
             file_size_bytes: result.fileSize,
             processing_options: options,
-            processed_file_url: result.processedUrl,
+            processed_url: result.processedUrl,
             status: 'completed',
             completed_at: new Date().toISOString()
           });
