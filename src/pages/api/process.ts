@@ -167,18 +167,24 @@ export default async function handler(
       }
 
       // Add processing record to history
-      await userSupabase
+      const { error: historyError } = await userSupabase
         .from('processing_history')
         .insert({
-          id: processingId,
+          processing_id: processingId,
           user_id: user.id,
           original_filename: originalFileName,
-          processed_url: result.processedUrl,
           page_count: result.pageCount,
-          file_size: result.fileSize,
-          options,
-          processed_at: new Date().toISOString()
+          file_size_bytes: result.fileSize,
+          processing_options: options,
+          status: 'completed',
+          completed_at: new Date().toISOString()
         });
+
+      if (historyError) {
+        console.error('Failed to insert processing history for Pro user:', historyError);
+      } else {
+        console.log('Successfully inserted processing history for Pro user');
+      }
 
       res.status(200).json({ 
         result,
@@ -268,7 +274,7 @@ export default async function handler(
         }
 
         // Add processing record to history
-        await userSupabase
+        const { error: historyError } = await userSupabase
           .from('processing_history')
           .insert({
             processing_id: processingId,
@@ -280,6 +286,12 @@ export default async function handler(
             status: 'completed',
             completed_at: new Date().toISOString()
           });
+
+        if (historyError) {
+          console.error('Failed to insert processing history for free user:', historyError);
+        } else {
+          console.log('Successfully inserted processing history for free user');
+        }
 
         res.status(200).json({ 
           result, 
