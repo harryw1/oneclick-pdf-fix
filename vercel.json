@@ -24,29 +24,5 @@
       "path": "/api/cleanup-files",
       "schedule": "0 * * * *"
     }
-  ],
-  "redirects": [
-    {
-      "source": "/",
-      "has": [
-        {
-          "type": "host",
-          "value": "www.oneclickpdf.io"
-        }
-      ],
-      "destination": "https://oneclickpdf.io/",
-      "permanent": true
-    },
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "www.oneclickpdf.io"
-        }
-      ],
-      "destination": "https://oneclickpdf.io/$1",
-      "permanent": true
-    }
   ]
 }
