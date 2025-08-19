@@ -42,13 +42,20 @@ export default async function handler(
           throw new Error('Invalid client payload');
         }
 
-        const { userId } = userInfo;
+        const { userId, authToken } = userInfo;
         
-        if (!userId) {
-          throw new Error('User ID required');
+        if (!userId || !authToken) {
+          throw new Error('User ID and auth token required');
         }
 
-        // Verify user exists in our database
+        // SECURITY: Validate that the provided user ID matches the authenticated user
+        const { data: { user }, error: authError } = await supabase.auth.getUser(authToken);
+        
+        if (authError || !user || user.id !== userId) {
+          throw new Error('Authentication failed or user ID mismatch');
+        }
+
+        // Verify user exists in our database and get their plan
         const { data: profile } = await supabase
           .from('profiles')
           .select('plan')

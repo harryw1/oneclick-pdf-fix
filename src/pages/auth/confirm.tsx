@@ -27,19 +27,13 @@ export default function AuthConfirmPage() {
         const token_hash = router.query.token_hash || urlParams.get('token_hash') || hashParams.get('access_token');
         const type = router.query.type || urlParams.get('type') || hashParams.get('type');
         
-        // Log everything for debugging
-        console.log('=== Auth Callback Debug ===');
-        console.log('URL:', window.location.href);
-        console.log('Router query:', router.query);
-        console.log('URL search params:', Object.fromEntries(urlParams.entries()));
-        console.log('Hash params:', Object.fromEntries(hashParams.entries()));
-        console.log('Extracted params:', { code, token_hash, type, next });
+        // Extract auth parameters from URL
         
         const supabase = createClient();
         
         // PKCE flow - use auth state change listener
         if (code) {
-          console.log('Detected PKCE code, setting up auth state listener...');
+          // PKCE flow detected - set up auth state listener
           
           // Check URL parameters for type hints
           const typeParam = router.query.type || urlParams.get('type');
@@ -54,10 +48,10 @@ export default function AuthConfirmPage() {
           // Set up a one-time auth state change listener
           const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-              console.log('Auth state change:', event, session);
+              // Handle auth state change
               
               if (event === 'PASSWORD_RECOVERY' && session) {
-                console.log('Password recovery flow detected:', session);
+                // Password recovery flow detected
                 setStatus('success');
                 setMessage('Password reset confirmed! You can now set a new password.');
                 
@@ -72,13 +66,13 @@ export default function AuthConfirmPage() {
                   router.push('/auth/update-password');
                 }, 2000);
               } else if (event === 'SIGNED_IN' && session) {
-                console.log('User signed in via PKCE flow');
+                // User signed in via PKCE flow
                 
                 // Check if this was a password recovery flow
                 const storedFlowType = sessionStorage.getItem('auth-flow-type') || localStorage.getItem('auth-flow-type');
                 
                 if (storedFlowType === 'password-reset') {
-                  console.log('Password recovery flow detected via stored flow type');
+                  // Password recovery flow detected from stored state
                   setStatus('success');
                   setMessage('Password reset confirmed! You can now set a new password.');
                   
@@ -93,7 +87,7 @@ export default function AuthConfirmPage() {
                     router.push('/auth/update-password');
                   }, 2000);
                 } else {
-                  console.log('Regular sign-in flow (magic link or email confirmation)');
+                  // Regular sign-in flow
                   setStatus('success');
                   
                   // Check if this is a first-time email confirmation
@@ -115,7 +109,7 @@ export default function AuthConfirmPage() {
                   }, 2000);
                 }
               } else if (event === 'SIGNED_OUT' || !session) {
-                console.log('Auth state change but no session');
+                // Auth state changed but no session present
               }
             }
           );
@@ -123,7 +117,7 @@ export default function AuthConfirmPage() {
           // Also try to get the current session immediately
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
-            console.log('Session already exists:', session);
+            // Session already exists
             setStatus('success');
             subscription.unsubscribe();
             
@@ -172,19 +166,19 @@ export default function AuthConfirmPage() {
         
         // Legacy approach: Direct tokens in hash
         if (hashParams.get('access_token') && hashParams.get('refresh_token')) {
-          console.log('Detected tokens in hash, setting session...');
+          // Tokens detected in URL hash
           
-          const { data, error } = await supabase.auth.setSession({
+          const { error } = await supabase.auth.setSession({
             access_token: hashParams.get('access_token')!,
             refresh_token: hashParams.get('refresh_token')!
           });
           
           if (error) {
-            console.error('Session setting error:', error);
+            // Session setting failed
             throw error;
           }
           
-          console.log('Session set successfully:', data);
+          // Session set successfully
           setStatus('success');
           setMessage('Authentication successful! Redirecting to your dashboard...');
           
@@ -196,21 +190,21 @@ export default function AuthConfirmPage() {
         
         // Legacy approach: OTP verification
         if (token_hash && type) {
-          console.log('Attempting legacy OTP verification...');
+          // Attempting legacy OTP verification
           const validEmailTypes = ['signup', 'recovery', 'invite', 'magiclink', 'email_change'] as const;
           const emailType = validEmailTypes.includes(type as typeof validEmailTypes[number]) ? type as 'signup' | 'recovery' | 'invite' | 'magiclink' | 'email_change' : 'signup';
           
-          const { data, error } = await supabase.auth.verifyOtp({
+          const { error } = await supabase.auth.verifyOtp({
             token_hash: token_hash as string,
             type: emailType
           });
           
           if (error) {
-            console.error('OTP verification error:', error);
+            // OTP verification failed
             throw error;
           }
           
-          console.log('OTP verification success:', data);
+          // OTP verification successful
           
           // Handle success based on type
           switch (type) {
@@ -237,7 +231,7 @@ export default function AuthConfirmPage() {
         setMessage('Invalid confirmation link. Please request a new one.');
         
       } catch (error: unknown) {
-        console.error('Auth callback error:', error);
+        // Auth callback error occurred
         setStatus('error');
         setMessage(error instanceof Error ? error.message : 'Authentication failed. Please try again.');
       }

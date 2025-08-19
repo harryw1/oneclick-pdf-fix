@@ -22,8 +22,14 @@ export default async function handler(
   }
 
   // Verify this is called from a cron job
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error('CRON_SECRET environment variable is not set');
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+  
   const authHeader = req.headers.authorization;
-  if (!authHeader || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

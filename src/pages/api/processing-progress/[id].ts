@@ -43,7 +43,29 @@ export default async function handler(
       return res.status(401).json({ error: 'Invalid authentication' });
     }
 
-    // Use the database function to get comprehensive progress info
+    // SECURITY: First verify user owns this processing ID before calling RPC function
+    const { data: processingRecord } = await supabase
+      .from('processing_history')
+      .select('user_id')
+      .eq('processing_id', processingId)
+      .single();
+
+    // If not found in history, check queue
+    if (!processingRecord) {
+      const { data: queueRecord } = await supabase
+        .from('processing_queue')
+        .select('user_id')
+        .eq('processing_id', processingId)
+        .single();
+      
+      if (!queueRecord || queueRecord.user_id !== user.id) {
+        return res.status(404).json({ error: 'Processing ID not found' });
+      }
+    } else if (processingRecord.user_id !== user.id) {
+      return res.status(404).json({ error: 'Processing ID not found' });
+    }
+
+    // Now safely get comprehensive progress info
     const { data: progressData, error: progressError } = await supabase
       .rpc('get_processing_progress', { p_processing_id: processingId });
 
@@ -54,11 +76,6 @@ export default async function handler(
 
     if (!progressData) {
       return res.status(404).json({ error: 'Processing ID not found' });
-    }
-
-    // Check if user owns this processing ID
-    if (progressData.error) {
-      return res.status(404).json({ error: progressData.error });
     }
 
     // Get additional real-time operation data if available
