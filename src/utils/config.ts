@@ -1,7 +1,7 @@
 export function getBaseUrl(): string {
   // For production, use the custom domain
   if (process.env.NODE_ENV === 'production') {
-    return 'https://oneclickpdf.io';
+    return 'https://www.oneclickpdf.io';
   }
   
   // For development, use localhost
