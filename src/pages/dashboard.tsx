@@ -65,13 +65,15 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
           usage_this_week: data.usage_this_week,
           total_pages_processed: data.total_pages_processed
         });
+      } else {
+        console.error('Failed to fetch user profile:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
     } finally {
       setProfileLoading(false);
     }
-  }, [profileLoading]);
+  }, []); // Remove profileLoading dependency to prevent infinite loop
 
   const fetchProcessingHistory = useCallback(async (token: string) => {
     try {
@@ -149,18 +151,27 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
     return () => subscription.unsubscribe();
   }, [fetchUserProfile, fetchProcessingHistory]);
 
-  // Refresh data when user returns from processing
+  // Refresh data when user returns from processing with debouncing
   useEffect(() => {
+    let debounceTimer: NodeJS.Timeout;
+    
     const handleFocus = () => {
-      if (authToken) {
-        fetchUserProfile(authToken);
-        fetchProcessingHistory(authToken);
+      if (authToken && !profileLoading && !historyLoading) {
+        // Debounce rapid focus events
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          fetchUserProfile(authToken);
+          fetchProcessingHistory(authToken);
+        }, 1000); // 1 second debounce
       }
     };
 
     window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [authToken, fetchUserProfile, fetchProcessingHistory]);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearTimeout(debounceTimer);
+    };
+  }, [authToken, fetchUserProfile, fetchProcessingHistory, profileLoading, historyLoading]);
 
 
   const handleDownload = async (processingId: string, originalFilename: string) => {

@@ -64,14 +64,23 @@ export default async function handler(
     .eq('id', user.id)
     .single();
 
-  console.log('User profile:', profile, 'Error:', profileError);
+  console.log('=== UPLOAD DEBUG INFO ===');
+  console.log('User ID:', user.id);
+  console.log('User email:', user.email);
+  console.log('User profile:', profile);
+  console.log('Profile error:', profileError);
+  console.log('Request headers content-length:', req.headers['content-length']);
 
   try {
     // Set maxFileSize based on user tier - default to free if profile not found
     const userPlan = profile?.plan || 'free';
     const maxFileSize = (userPlan === 'pro_monthly' || userPlan === 'pro_annual') ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
     
-    console.log('User plan:', userPlan, 'Max file size (bytes):', maxFileSize, 'Max file size (MB):', maxFileSize / (1024 * 1024));
+    console.log('=== SIZE CALCULATION ===');
+    console.log('User plan:', userPlan);
+    console.log('Max file size (bytes):', maxFileSize);
+    console.log('Max file size (MB):', maxFileSize / (1024 * 1024));
+    console.log('Is Pro?', userPlan === 'pro_monthly' || userPlan === 'pro_annual');
     
     const form = formidable({
       uploadDir: '/tmp',
