@@ -17,7 +17,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== 'POST') {
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -28,8 +28,13 @@ export default async function handler(
     return res.status(500).json({ error: 'Server configuration error' });
   }
   
+  // For GET requests from Vercel cron, check for cron secret in headers
   const authHeader = req.headers.authorization;
-  if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+  const cronSecretHeader = req.headers['x-vercel-cron-secret'] || req.headers['cron-secret'];
+  
+  const isValidAuth = authHeader === `Bearer ${cronSecret}` || cronSecretHeader === cronSecret;
+  
+  if (!isValidAuth) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

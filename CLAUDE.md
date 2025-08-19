@@ -78,6 +78,7 @@ This is a Next.js 14 application providing PDF processing services with Supabase
 - `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret
 - `UPSTASH_REDIS_REST_URL` - Upstash Redis URL for rate limiting
 - `UPSTASH_REDIS_REST_TOKEN` - Upstash Redis token
+- `CRON_SECRET` - Secret for authenticating Vercel cron jobs
 
 ### Google Cloud Configuration
 - **Automatic project ID extraction**: System extracts project ID from service account JSON automatically
@@ -103,3 +104,24 @@ This is a Next.js 14 application providing PDF processing services with Supabase
 - OCR and document classification features are fully implemented with Google Vision API
 - User profiles are created automatically during first API call if missing
 - Authentication uses Supabase's PKCE flow with proper callback handling
+
+## Domain Configuration Requirements
+
+### Supabase Dashboard Configuration
+In your Supabase project dashboard, ensure these redirect URLs are configured:
+- `https://oneclickpdf.io/**` - For apex domain requests
+- `https://www.oneclickpdf.io/**` - For www subdomain (primary)
+- `http://localhost:3000/**` - For local development
+
+### Resend Configuration
+1. **Domain Setup**: Configure `mail.oneclickpdf.io` (recommended) or `oneclickpdf.io` in Resend dashboard
+2. **Required DNS Records**: Add these records to your domain registrar:
+   - **SPF Record**: `v=spf1 include:_spf.resend.com ~all`
+   - **DKIM Record**: Use the key provided by Resend dashboard
+   - **DMARC Record** (optional): `v=DMARC1; p=quarantine; rua=mailto:dmarc@oneclickpdf.io`
+3. **Domain Verification**: Complete verification process in Resend dashboard
+4. **From Address**: Use verified domain (e.g., `noreply@mail.oneclickpdf.io`)
+
+### Vercel Configuration
+- Domain redirect: `oneclickpdf.io` → `www.oneclickpdf.io` (already configured)
+- Ensure `CRON_SECRET` environment variable is set for cleanup job authentication
