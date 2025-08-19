@@ -33,7 +33,7 @@ export default function Layout({
   const router = useRouter();
   
   // Generate canonical URL
-  const baseUrl = 'https://www.oneclickpdf.io';
+  const baseUrl = 'https://oneclickpdf.io';
   const canonicalUrl = canonical || `${baseUrl}${router.asPath.split('?')[0]}`;
 
   useEffect(() => {
