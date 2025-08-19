@@ -47,8 +47,6 @@ interface ProcessingProgressProps {
 
 export default function ProcessingProgress({ authToken, onStatusChange }: ProcessingProgressProps) {
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatusData | null>(null);
-  // const [isLoading, setIsLoading] = useState(false); // For future use
-  // const [error, setError] = useState<string | null>(null); // For future use
 
   // Fetch processing status
   const fetchProcessingStatus = async () => {

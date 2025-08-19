@@ -71,7 +71,4 @@ export default async function handler(
     redirectTo: '/api/blob/upload',
     upgrade: true
   });
-
-  // Legacy code commented out - all uploads now use Vercel Blob
-  // ... (formidable upload code removed for clarity)
 }
