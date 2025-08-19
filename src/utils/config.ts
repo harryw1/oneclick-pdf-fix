@@ -1,7 +1,7 @@
 export function getBaseUrl(): string {
-  // For production, use the exact URL that matches your Vercel deployment
+  // For production, use the custom domain
   if (process.env.NODE_ENV === 'production') {
-    return 'https://oneclick-pdf-fix.vercel.app';
+    return 'https://oneclickpdf.io';
   }
   
   // For development, use localhost
