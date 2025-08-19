@@ -330,7 +330,13 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
       if (response.ok && data.url) {
         window.location.href = data.url;
       } else {
-        alert('Failed to open subscription management');
+        // Show user-friendly error messages
+        const message = data.message || 'Failed to open subscription management';
+        if (data.supportRequired) {
+          alert(`${message} Please email support for assistance.`);
+        } else {
+          alert(message);
+        }
       }
     } catch (error) {
       console.error('Portal error:', error);

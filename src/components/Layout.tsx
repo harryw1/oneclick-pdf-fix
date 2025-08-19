@@ -20,25 +20,94 @@ export default function Layout({
   showAuth = true 
 }: LayoutProps) {
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [userPlan, setUserPlan] = useState<'free' | 'pro_monthly' | 'pro_annual'>('free');
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
     if (showAuth) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setUser(session?.user ? { id: session.user.id, email: session.user.email || '' } : null);
-      });
+      const fetchUserData = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser({ id: session.user.id, email: session.user.email || '' });
+          setAuthToken(session.access_token);
+          
+          // Get user profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('plan')
+            .eq('id', session.user.id)
+            .single();
+            
+          setUserPlan(profile?.plan || 'free');
+        } else {
+          setUser(null);
+          setAuthToken(null);
+          setUserPlan('free');
+        }
+      };
+      
+      fetchUserData();
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        setUser(session?.user ? { id: session.user.id, email: session.user.email || '' } : null);
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (session?.user) {
+          setUser({ id: session.user.id, email: session.user.email || '' });
+          setAuthToken(session.access_token);
+          
+          // Get user profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('plan')
+            .eq('id', session.user.id)
+            .single();
+            
+          setUserPlan(profile?.plan || 'free');
+        } else {
+          setUser(null);
+          setAuthToken(null);
+          setUserPlan('free');
+        }
       });
 
       return () => subscription.unsubscribe();
     }
-  }, [showAuth, supabase.auth]);
+  }, [showAuth, supabase]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     window.location.href = '/';
+  };
+
+  const handleManageSubscription = async () => {
+    if (!authToken) return;
+
+    try {
+      const response = await fetch('/api/subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ action: 'create_portal' })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        // Show user-friendly error messages
+        const message = data.message || 'Failed to open subscription management';
+        if (data.supportRequired) {
+          alert(`${message} Please email support for assistance.`);
+        } else {
+          alert(message);
+        }
+      }
+    } catch (error) {
+      console.error('Portal error:', error);
+      alert('Failed to open subscription management');
+    }
   };
 
   return (
@@ -65,9 +134,15 @@ export default function Layout({
               
               {showAuth && (
                 <div className="flex items-center space-x-3">
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href="/pricing">Pricing</Link>
-                  </Button>
+                  {user && userPlan !== 'free' ? (
+                    <Button variant="ghost" size="sm" onClick={handleManageSubscription}>
+                      Manage Subscription
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href="/pricing">Pricing</Link>
+                    </Button>
+                  )}
                   {user ? (
                     <>
                       <Button variant="outline" size="sm" asChild>

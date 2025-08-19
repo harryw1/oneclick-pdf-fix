@@ -111,7 +111,19 @@ export default async function handler(
       } else if (action === 'create_portal') {
         // Create customer portal session
         if (!profile.stripe_customer_id) {
-          return res.status(400).json({ error: 'No active subscription found' });
+          // Handle edge case where pro user lacks stripe_customer_id
+          if (profile.plan !== 'free') {
+            console.warn(`Pro user ${user.id} with plan ${profile.plan} missing stripe_customer_id`);
+            return res.status(400).json({ 
+              error: 'Subscription management unavailable', 
+              message: 'Please contact support to manage your subscription.',
+              supportRequired: true 
+            });
+          }
+          return res.status(400).json({ 
+            error: 'No active subscription found',
+            message: 'You need an active subscription to access this feature.' 
+          });
         }
         
         const session = await createCustomerPortalSession(profile.stripe_customer_id);

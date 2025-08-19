@@ -12,6 +12,7 @@ import Link from 'next/link';
 export default function UploadPage() {
   const [userPlan, setUserPlan] = useState<'free' | 'pro_monthly' | 'pro_annual'>('free');
   const [loading, setLoading] = useState(true);
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -24,6 +25,9 @@ export default function UploadPage() {
         return;
       }
 
+      
+      // Set auth token
+      setAuthToken(session.access_token);
       
       // Get user profile
       const { data: profile } = await supabase
@@ -79,6 +83,38 @@ export default function UploadPage() {
     } catch (error) {
       console.error('Upload error:', error);
       alert(error instanceof Error ? error.message : 'Upload failed. Please try again.');
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    if (!authToken) return;
+
+    try {
+      const response = await fetch('/api/subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ action: 'create_portal' })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.url) {
+        window.location.href = data.url;
+      } else {
+        // Show user-friendly error messages
+        const message = data.message || 'Failed to open subscription management';
+        if (data.supportRequired) {
+          alert(`${message} Please email support for assistance.`);
+        } else {
+          alert(message);
+        }
+      }
+    } catch (error) {
+      console.error('Portal error:', error);
+      alert('Failed to open subscription management');
     }
   };
 
@@ -141,9 +177,13 @@ export default function UploadPage() {
                   </>
                 )}
               </div>
-              {userPlan === 'free' && (
+              {userPlan === 'free' ? (
                 <Button size="sm" asChild>
                   <Link href="/pricing">Upgrade to Pro</Link>
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" onClick={handleManageSubscription}>
+                  Manage Subscription
                 </Button>
               )}
             </div>
