@@ -129,15 +129,38 @@ export default async function handler(
       res.status(500).json({ error: 'Request processing failed' });
     }
   } else if (req.method === 'GET') {
-    // Get subscription status
+    // Get subscription status with accurate usage statistics
     try {
-      res.status(200).json({ 
-        plan: profile.plan,
-        usage_this_week: profile.usage_this_week,
-        total_pages_processed: profile.total_pages_processed,
-        stripe_customer_id: profile.stripe_customer_id,
-        stripe_subscription_id: profile.stripe_subscription_id
+      // Use database function to get accurate stats and fix any inconsistencies
+      const { data: accurateStats, error: statsError } = await userSupabase.rpc('get_user_stats', {
+        p_user_id: user.id
       });
+
+      if (statsError) {
+        console.error('Failed to get accurate user stats:', statsError);
+        // Fallback to profile data
+        res.status(200).json({ 
+          plan: profile.plan,
+          usage_this_week: profile.usage_this_week,
+          total_pages_processed: profile.total_pages_processed,
+          stripe_customer_id: profile.stripe_customer_id,
+          stripe_subscription_id: profile.stripe_subscription_id
+        });
+      } else {
+        // Return accurate, corrected statistics
+        res.status(200).json({ 
+          plan: accurateStats.plan,
+          usage_this_week: accurateStats.usage_this_week,
+          total_pages_processed: accurateStats.total_pages_processed,
+          stripe_customer_id: profile.stripe_customer_id,
+          stripe_subscription_id: profile.stripe_subscription_id,
+          corrected: accurateStats.corrected || false
+        });
+        
+        if (accurateStats.corrected) {
+          console.log(`Corrected usage stats for user ${user.id}`);
+        }
+      }
     } catch (error) {
       console.error('Subscription status error:', error);
       res.status(500).json({ error: 'Failed to get subscription status' });

@@ -145,25 +145,20 @@ export default async function handler(
         userToken: token
       });
 
-      // Update usage statistics
-      const newUsage = profile.usage_this_week + result.pageCount;
-      const newTotal = profile.total_pages_processed + result.pageCount;
-      const newUsageThisMonth = (profile.usage_this_month || 0) + result.pageCount;
+      // Update usage statistics using atomic database function
+      console.log(`Updating usage for Pro user: +${result.pageCount} pages`);
       
-      const { error: updateError } = await userSupabase
-        .from('profiles')
-        .update({ 
-          usage_this_week: newUsage,
-          usage_this_month: newUsageThisMonth,
-          total_pages_processed: newTotal,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
+      const { data: usageUpdate, error: updateError } = await userSupabase.rpc('update_user_usage_safe', {
+        p_user_id: user.id,
+        p_page_count: result.pageCount
+      });
 
       if (updateError) {
-        console.error('Failed to update user usage statistics in process.ts:', updateError);
+        console.error('Failed to update user usage statistics (Pro):', updateError);
+      } else if (!usageUpdate?.success) {
+        console.error('Usage update failed (Pro):', usageUpdate?.error);
       } else {
-        console.log(`Updated usage statistics in process.ts: ${newUsage} pages this week, ${newTotal} total pages`);
+        console.log(`Successfully updated usage (Pro): ${usageUpdate.usage_this_week} pages this week, ${usageUpdate.total_pages_processed} total pages`);
       }
 
       // Add processing record to history
@@ -254,23 +249,20 @@ export default async function handler(
           userToken: token
         });
 
-        // Update usage statistics
-        const newUsage = profile.usage_this_week + result.pageCount;
-        const newTotal = profile.total_pages_processed + result.pageCount;
+        // Update usage statistics using atomic database function
+        console.log(`Updating usage for Free user: +${result.pageCount} pages`);
         
-        const { error: updateError } = await userSupabase
-          .from('profiles')
-          .update({ 
-            usage_this_week: newUsage,
-            total_pages_processed: newTotal,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
+        const { data: usageUpdate, error: updateError } = await userSupabase.rpc('update_user_usage_safe', {
+          p_user_id: user.id,
+          p_page_count: result.pageCount
+        });
 
         if (updateError) {
-          console.error('Failed to update user usage statistics for free user:', updateError);
+          console.error('Failed to update user usage statistics (Free):', updateError);
+        } else if (!usageUpdate?.success) {
+          console.error('Usage update failed (Free):', usageUpdate?.error);
         } else {
-          console.log(`Updated usage statistics for free user: ${newUsage} pages this week, ${newTotal} total pages`);
+          console.log(`Successfully updated usage (Free): ${usageUpdate.usage_this_week} pages this week, ${usageUpdate.total_pages_processed} total pages`);
         }
 
         // Add processing record to history
