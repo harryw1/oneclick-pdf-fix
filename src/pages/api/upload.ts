@@ -58,7 +58,7 @@ export default async function handler(
     },
   });
 
-  const { data: profile, error: profileError } = await userSupabase
+  const { data: profile } = await userSupabase
     .from('profiles')
     .select('plan')
     .eq('id', user.id)

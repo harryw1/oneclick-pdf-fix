@@ -43,37 +43,50 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
   const [profileLoading, setProfileLoading] = useState(false);
 
   const fetchUserProfile = useCallback(async (token: string) => {
-    if (profileLoading) return; // Prevent multiple simultaneous calls
+    // Use a local variable to prevent infinite loops
+    let isLoading = false;
     
-    try {
+    return new Promise<void>((resolve) => {
+      if (isLoading || profileLoading) {
+        resolve();
+        return;
+      }
+      
+      isLoading = true;
       setProfileLoading(true);
-      const response = await fetch('/api/subscription', {
+      
+      fetch('/api/subscription', {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
         }
+      })
+      .then(async (response) => {
+        if (response.ok) {
+          const data = await response.json();
+          // Get current user info from session to avoid circular dependency
+          const { data: { session } } = await createClient().auth.getSession();
+          setProfile({
+            id: session?.user?.id || '',
+            email: session?.user?.email || '',
+            plan: data.plan,
+            usage_this_week: data.usage_this_week,
+            total_pages_processed: data.total_pages_processed
+          });
+        } else {
+          console.error('Failed to fetch user profile:', response.status, response.statusText);
+        }
+      })
+      .catch((error) => {
+        console.error('Failed to fetch user profile:', error);
+      })
+      .finally(() => {
+        setProfileLoading(false);
+        isLoading = false;
+        resolve();
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Get current user info from session to avoid circular dependency
-        const { data: { session } } = await createClient().auth.getSession();
-        setProfile({
-          id: session?.user?.id || '',
-          email: session?.user?.email || '',
-          plan: data.plan,
-          usage_this_week: data.usage_this_week,
-          total_pages_processed: data.total_pages_processed
-        });
-      } else {
-        console.error('Failed to fetch user profile:', response.status, response.statusText);
-      }
-    } catch (error) {
-      console.error('Failed to fetch user profile:', error);
-    } finally {
-      setProfileLoading(false);
-    }
-  }, []); // Fixed: Remove profileLoading dependency to prevent infinite loop
+    });
+  }, [profileLoading]); // Include profileLoading dependency
 
   const fetchProcessingHistory = useCallback(async (token: string) => {
     try {
