@@ -185,7 +185,7 @@ export default async function handler(
         result,
         immediate: true,
         usage: {
-          pagesProcessedThisMonth: newUsageThisMonth,
+          pagesProcessedThisMonth: usageUpdate?.usage_this_week || 0,
           monthlyLimit: 100
         }
       });
@@ -289,9 +289,9 @@ export default async function handler(
           result, 
           immediate: true,
           usage: {
-            pagesProcessedThisWeek: newUsage,
+            pagesProcessedThisWeek: usageUpdate?.usage_this_week || 0,
             weeklyLimit: 5,
-            remainingPages: Math.max(0, 5 - newUsage)
+            remainingPages: Math.max(0, 5 - (usageUpdate?.usage_this_week || 0))
           }
         });
       }

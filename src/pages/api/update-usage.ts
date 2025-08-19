@@ -30,7 +30,7 @@ export default async function handler(
   }
 
   const token = authHeader.split(' ')[1];
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const supabase = createClient(supabaseUrl!, supabaseAnonKey!);
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   
   if (authError || !user) {
