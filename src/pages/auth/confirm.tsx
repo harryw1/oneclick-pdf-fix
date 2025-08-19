@@ -41,6 +41,16 @@ export default function AuthConfirmPage() {
         if (code) {
           console.log('Detected PKCE code, setting up auth state listener...');
           
+          // Check URL parameters for type hints
+          const typeParam = router.query.type || urlParams.get('type');
+          const isPasswordRecovery = typeParam === 'recovery';
+          
+          // Store the flow type in sessionStorage (more reliable than localStorage)
+          const authFlowType = localStorage.getItem('auth-flow-type') || sessionStorage.getItem('auth-flow-type');
+          if (isPasswordRecovery || authFlowType === 'password-reset') {
+            sessionStorage.setItem('auth-flow-type', 'password-reset');
+          }
+          
           // Set up a one-time auth state change listener
           const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
@@ -51,6 +61,10 @@ export default function AuthConfirmPage() {
                 setStatus('success');
                 setMessage('Password reset confirmed! You can now set a new password.');
                 
+                // Clear flow type indicators
+                localStorage.removeItem('auth-flow-type');
+                sessionStorage.removeItem('auth-flow-type');
+                
                 // Unsubscribe from the listener
                 subscription.unsubscribe();
                 
@@ -58,17 +72,48 @@ export default function AuthConfirmPage() {
                   router.push('/auth/update-password');
                 }, 2000);
               } else if (event === 'SIGNED_IN' && session) {
-                console.log('User signed in via PKCE flow (magic link):', session);
-                setStatus('success');
-                setMessage('Authentication successful! Redirecting to your dashboard...');
+                console.log('User signed in via PKCE flow');
                 
-                // Unsubscribe from the listener
-                subscription.unsubscribe();
+                // Check if this was a password recovery flow
+                const storedFlowType = sessionStorage.getItem('auth-flow-type') || localStorage.getItem('auth-flow-type');
                 
-                const redirectUrl = (next as string) || '/dashboard';
-                setTimeout(() => {
-                  router.push(redirectUrl);
-                }, 2000);
+                if (storedFlowType === 'password-reset') {
+                  console.log('Password recovery flow detected via stored flow type');
+                  setStatus('success');
+                  setMessage('Password reset confirmed! You can now set a new password.');
+                  
+                  // Clear flow type indicators
+                  localStorage.removeItem('auth-flow-type');
+                  sessionStorage.removeItem('auth-flow-type');
+                  
+                  // Unsubscribe from the listener
+                  subscription.unsubscribe();
+                  
+                  setTimeout(() => {
+                    router.push('/auth/update-password');
+                  }, 2000);
+                } else {
+                  console.log('Regular sign-in flow (magic link or email confirmation)');
+                  setStatus('success');
+                  
+                  // Check if this is a first-time email confirmation
+                  const isFirstTimeConfirmation = session.user.email_confirmed_at && 
+                    new Date(session.user.email_confirmed_at).getTime() > (Date.now() - 30000); // Within last 30 seconds
+                  
+                  if (isFirstTimeConfirmation) {
+                    setMessage('🎉 Welcome! Your email has been confirmed successfully. Redirecting to your dashboard...');
+                  } else {
+                    setMessage('Authentication successful! Redirecting to your dashboard...');
+                  }
+                  
+                  // Unsubscribe from the listener
+                  subscription.unsubscribe();
+                  
+                  const redirectUrl = (next as string) || '/dashboard';
+                  setTimeout(() => {
+                    router.push(redirectUrl);
+                  }, 2000);
+                }
               } else if (event === 'SIGNED_OUT' || !session) {
                 console.log('Auth state change but no session');
               }
@@ -83,17 +128,29 @@ export default function AuthConfirmPage() {
             subscription.unsubscribe();
             
             // For immediate sessions, we need to check if this was a password recovery
-            // by looking at localStorage as fallback (since PASSWORD_RECOVERY event may have already fired)
-            const authFlowType = localStorage.getItem('auth-flow-type');
-            localStorage.removeItem('auth-flow-type');
+            const storedFlowType = sessionStorage.getItem('auth-flow-type') || localStorage.getItem('auth-flow-type');
             
-            if (authFlowType === 'password-reset') {
+            if (storedFlowType === 'password-reset' || isPasswordRecovery) {
               setMessage('Password reset confirmed! You can now set a new password.');
+              
+              // Clear flow type indicators
+              localStorage.removeItem('auth-flow-type');
+              sessionStorage.removeItem('auth-flow-type');
+              
               setTimeout(() => {
                 router.push('/auth/update-password');
               }, 2000);
             } else {
-              setMessage('Authentication successful! Redirecting to your dashboard...');
+              // Check if this is a first-time email confirmation
+              const isFirstTimeConfirmation = session.user.email_confirmed_at && 
+                new Date(session.user.email_confirmed_at).getTime() > (Date.now() - 30000); // Within last 30 seconds
+              
+              if (isFirstTimeConfirmation) {
+                setMessage('🎉 Welcome! Your email has been confirmed successfully. Redirecting to your dashboard...');
+              } else {
+                setMessage('Authentication successful! Redirecting to your dashboard...');
+              }
+              
               const redirectUrl = (next as string) || '/dashboard';
               setTimeout(() => {
                 router.push(redirectUrl);
