@@ -66,6 +66,7 @@ export default function UploadPage() {
         handleUploadUrl: '/api/blob/upload',
         clientPayload: JSON.stringify({
           userId: session.data.session?.user.id,
+          authToken: token,
           processingId: processingId,
           originalFileName: file.name
         }),

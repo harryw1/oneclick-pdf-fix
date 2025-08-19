@@ -17,6 +17,16 @@ export default async function handler(
   res: NextApiResponse
 ) {
   try {
+    // SECURITY: Environment validation
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.error('BLOB_READ_WRITE_TOKEN environment variable is missing');
+      return res.status(500).json({ 
+        error: 'Server configuration error',
+        message: 'Blob storage is not properly configured. Please contact support.',
+        code: 'MISSING_BLOB_TOKEN'
+      });
+    }
+
     // SECURITY: Rate limiting
     const clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress || 'unknown';
     const identifier = Array.isArray(clientIP) ? clientIP[0] : clientIP;
@@ -84,9 +94,31 @@ export default async function handler(
     return res.json(jsonResponse);
   } catch (error) {
     console.error('Blob upload error:', error);
+    
+    // Provide specific error messages for common issues
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    if (errorMessage.includes('Failed to retrieve the client token')) {
+      return res.status(500).json({ 
+        error: 'Blob storage configuration error',
+        message: 'Unable to generate upload token. Please ensure BLOB_READ_WRITE_TOKEN is configured.',
+        code: 'BLOB_TOKEN_ERROR',
+        details: errorMessage
+      });
+    }
+    
+    if (errorMessage.includes('Authentication failed')) {
+      return res.status(401).json({ 
+        error: 'Authentication failed',
+        message: 'Please sign in again to continue.',
+        code: 'AUTH_ERROR'
+      });
+    }
+    
     return res.status(500).json({ 
       error: 'Failed to generate upload token',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      message: 'An unexpected error occurred. Please try again.',
+      details: errorMessage
     });
   }
 }

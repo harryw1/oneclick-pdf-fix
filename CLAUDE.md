@@ -72,6 +72,7 @@ This is a Next.js 14 application providing PDF processing services with Supabase
 - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key
 - `SUPABASE_API_KEY` - Supabase service role key
+- `BLOB_READ_WRITE_TOKEN` - Vercel Blob storage read-write token (auto-generated when creating Blob store)
 - `GOOGLE_CREDENTIALS_BASE64` - Base64 encoded Google Cloud service account JSON (project ID extracted automatically)
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Stripe publishable key
 - `STRIPE_SECRET_KEY` - Stripe secret key
