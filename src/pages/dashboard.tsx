@@ -73,7 +73,7 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
     } finally {
       setProfileLoading(false);
     }
-  }, []); // Remove profileLoading dependency to prevent infinite loop
+  }, []); // Fixed: Remove profileLoading dependency to prevent infinite loop
 
   const fetchProcessingHistory = useCallback(async (token: string) => {
     try {

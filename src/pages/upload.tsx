@@ -70,7 +70,7 @@ export default function UploadPage() {
         throw new Error(errorData.message || errorData.error || 'Failed to get upload URL');
       }
 
-      const { processingId, uploadUrl, blobUrl } = await urlResponse.json();
+      const { processingId, uploadUrl } = await urlResponse.json();
       console.log('Got processing ID:', processingId);
       console.log('Got upload URL:', uploadUrl);
 
