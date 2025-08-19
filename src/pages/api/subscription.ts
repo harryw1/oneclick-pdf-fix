@@ -28,7 +28,7 @@ export default async function handler(
   const clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress || 'unknown';
   const identifier = Array.isArray(clientIP) ? clientIP[0] : clientIP;
   
-  const rateLimitResult = await checkRateLimit(subscriptionRateLimit, identifier, 3, 60000);
+  const rateLimitResult = await checkRateLimit(subscriptionRateLimit, identifier, 10, 60000); // Increased from 3 to 10 requests per minute
   
   if (!rateLimitResult.success) {
     return res.status(429).json({ 
