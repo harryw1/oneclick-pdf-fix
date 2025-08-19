@@ -47,7 +47,6 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
   const [processingHistory, setProcessingHistory] = useState<ProcessingHistoryItem[]>([]);
   
   // Simple loading states for UI (not used in dependencies)
-  const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   
   // Use refs for caching and loading states to avoid dependency loops
@@ -89,7 +88,6 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
     
     abortControllerRef.current = new AbortController();
     profileCache.current.isLoading = true;
-    setIsProfileLoading(true);
     
     try {
       const response = await fetch('/api/subscription', {
@@ -129,7 +127,6 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
       }
     } finally {
       profileCache.current.isLoading = false;
-      setIsProfileLoading(false);
       abortControllerRef.current = null;
     }
   }, []); // Stable reference with no dependencies
@@ -223,7 +220,8 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
     };
     
     getSession();
-  }, []); // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount - functions have stable references
   
   // Auth state listener - separate effect for clarity
   useEffect(() => {
@@ -243,7 +241,8 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
     });
 
     return () => subscription.unsubscribe();
-  }, []); // Stable reference, no dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Stable reference, no dependencies - functions have stable references
 
   // Window focus handler with proper debouncing and caching
   useEffect(() => {
@@ -273,7 +272,8 @@ export default function DashboardPage({ profile: initialProfile }: DashboardProp
       window.removeEventListener('focus', handleFocus);
       clearTimeout(debounceTimer);
     };
-  }, [authToken]); // Only depend on authToken, which is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps  
+  }, [authToken]); // Only depend on authToken - functions have stable references
 
 
   const handleDownload = async (processingId: string, originalFilename: string) => {
