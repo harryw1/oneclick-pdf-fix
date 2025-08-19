@@ -40,44 +40,64 @@ export default function UploadPage() {
 
   const handleFileSelect = async (file: File) => {
     try {
-      // Upload file and get processing ID
-      const formData = new FormData();
-      formData.append('file', file);
+      console.log('=== STARTING BLOB UPLOAD ===');
+      console.log('File:', file.name, 'Size:', file.size, 'Type:', file.type);
 
-      const uploadResponse = await fetch('/api/upload', {
+      // Step 1: Get upload URL from our API
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      
+      if (!token) {
+        throw new Error('Authentication required. Please sign in again.');
+      }
+
+      console.log('Getting upload URL...');
+      const urlResponse = await fetch('/api/upload-url', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: formData
+        body: JSON.stringify({
+          filename: file.name,
+          fileSize: file.size,
+          contentType: file.type
+        })
+      });
+
+      if (!urlResponse.ok) {
+        const errorData = await urlResponse.json();
+        throw new Error(errorData.message || errorData.error || 'Failed to get upload URL');
+      }
+
+      const { processingId, uploadUrl, blobUrl } = await urlResponse.json();
+      console.log('Got processing ID:', processingId);
+      console.log('Got upload URL:', uploadUrl);
+
+      // Step 2: Upload directly to our blob endpoint using PUT request
+      console.log('Uploading file to Blob storage...');
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
       });
 
       if (!uploadResponse.ok) {
-        let errorMessage = 'Upload failed';
-        
-        try {
-          const errorData = await uploadResponse.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          // Handle non-JSON responses (like 413 errors)
-          const errorText = await uploadResponse.text();
-          if (uploadResponse.status === 413) {
-            errorMessage = 'File too large. Please upload a smaller PDF (max 100MB).';
-          } else {
-            errorMessage = `Upload failed (${uploadResponse.status}): ${errorText.substring(0, 100)}`;
-          }
-        }
-        
-        throw new Error(errorMessage);
+        console.error('Blob upload failed:', uploadResponse.status, uploadResponse.statusText);
+        const errorText = await uploadResponse.text();
+        console.error('Error response:', errorText);
+        throw new Error(`File upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
       }
 
       const uploadResult = await uploadResponse.json();
-      const { processingId } = uploadResult;
+      console.log('✅ File uploaded successfully to Blob storage');
+      console.log('Upload result:', uploadResult);
       
-      // Store blob info for processing page
-      if (uploadResult.blobUrl) {
-        sessionStorage.setItem(`blob_${processingId}`, uploadResult.blobUrl);
-      }
+      // Step 3: Store info for processing page and redirect
+      // Use the actual blob URL from the upload response
+      sessionStorage.setItem(`blob_${processingId}`, uploadResult.blobUrl);
       sessionStorage.setItem(`filename_${processingId}`, file.name);
       
       // Redirect to processing page
