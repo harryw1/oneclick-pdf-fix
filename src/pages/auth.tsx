@@ -204,7 +204,8 @@ export default function AuthPage() {
   return (
     <Layout 
       title={`${showPasswordReset ? 'Reset Password' : isSignUp ? 'Sign Up' : 'Sign In'} - OneClick PDF Fixer`}
-      description="Access your OneClick PDF Fixer account"
+      description="Access your OneClick PDF Fixer account to process PDFs with AI-powered document repair and optimization tools."
+      keywords="PDF fixer login, document processing account, sign up PDF tools, user account"
       showAuth={false}
     >
       <div className="flex items-center justify-center min-h-[80vh] p-4">

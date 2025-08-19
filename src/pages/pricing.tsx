@@ -129,8 +129,10 @@ export default function PricingPage() {
 
   return (
     <Layout 
-      title="Pricing - OneClick PDF Fixer"
-      description="Choose your plan for unlimited PDF processing"
+      title="Pricing Plans - OneClick PDF Fixer | Professional PDF Processing"
+      description="Choose your PDF processing plan. Free plan includes 5 pages/week. Pro plan offers unlimited processing, OCR, and priority support. Cancel anytime."
+      keywords="PDF processing pricing, document repair plans, PDF fixer cost, OCR pricing, professional PDF tools"
+      ogImage="/og-pricing.png"
     >
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">

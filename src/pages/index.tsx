@@ -86,11 +86,13 @@ export default function HomePage() {
   return (
     <Layout 
       title="OneClick PDF Fixer - Professional Document Processing"
-      description="Transform poorly scanned documents into professional, readable PDFs with AI-powered processing"
+      description="Transform poorly scanned documents into professional, readable PDFs with AI-powered processing. Auto-rotate, compress, and fix PDF orientation with OCR technology."
+      keywords="PDF fixer, document repair, PDF rotation, scan correction, OCR, PDF optimization, document processing, AI PDF tools"
+      ogImage="/og-home.png"
     >
       {/* Hero Section */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-16 animate-fade-in">
+        <section className="text-center mb-16 animate-fade-in">
           <div className="inline-flex items-center space-x-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
             <Star className="h-4 w-4" />
             <span>Professional PDF Processing</span>
@@ -134,10 +136,12 @@ export default function HomePage() {
               Start with 5 pages per week • No credit card required
             </p>
           )}
-        </div>
+        </section>
 
-        {/* Features Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        {/* Features Section */}
+        <section aria-label="Key Features">
+          <h2 className="sr-only">Key Features</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {features.map((feature, index) => (
             <Card key={feature.title} className="group hover:shadow-lg transition-all duration-300 animate-slide-up border-0 bg-white/80 backdrop-blur-sm" style={{ animationDelay: `${index * 100}ms` }}>
               <CardContent className="p-6 text-center">
@@ -147,28 +151,33 @@ export default function HomePage() {
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+        </section>
 
         {/* Benefits Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          {benefits.map((benefit, index) => (
-            <div key={benefit.title} className="text-center animate-slide-up" style={{ animationDelay: `${index * 200}ms` }}>
-              <div className="mx-auto mb-4 h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center">
-                <benefit.icon className="h-8 w-8 text-primary-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3">{benefit.title}</h3>
-              <p className="text-muted-foreground">{benefit.description}</p>
-            </div>
-          ))}
-        </div>
+        <section aria-label="Benefits">
+          <h2 className="sr-only">Why Choose OneClick PDF Fixer</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+            {benefits.map((benefit, index) => (
+              <article key={benefit.title} className="text-center animate-slide-up" style={{ animationDelay: `${index * 200}ms` }}>
+                <div className="mx-auto mb-4 h-16 w-16 bg-primary-100 rounded-full flex items-center justify-center">
+                  <benefit.icon className="h-8 w-8 text-primary-600" />
+                </div>
+                <h3 className="text-xl font-semibold mb-3">{benefit.title}</h3>
+                <p className="text-muted-foreground">{benefit.description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         {/* Use Cases */}
-        <Card className="bg-gradient-to-r from-primary-50 to-primary-100/50 border-primary-200">
-          <CardContent className="p-8 sm:p-12">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-foreground mb-4">Perfect For</h2>
-              <p className="text-lg text-muted-foreground">Common document processing challenges</p>
-            </div>
+        <section aria-label="Use Cases">
+          <Card className="bg-gradient-to-r from-primary-50 to-primary-100/50 border-primary-200">
+            <CardContent className="p-8 sm:p-12">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold text-foreground mb-4">Perfect For</h2>
+                <p className="text-lg text-muted-foreground">Common document processing challenges</p>
+              </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
@@ -185,11 +194,12 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </section>
 
         {/* CTA Section */}
-        <div className="text-center mt-16">
+        <section aria-label="Call to Action" className="text-center mt-16">
           <h2 className="text-3xl font-bold text-foreground mb-4">
             Ready to Fix Your PDFs?
           </h2>
@@ -219,7 +229,7 @@ export default function HomePage() {
               </div>
             </div>
           )}
-        </div>
+        </section>
       </div>
     </Layout>
   );

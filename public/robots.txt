@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://oneclickpdffix.com/sitemap.xml
+
+# Disallow admin/API routes
+Disallow: /api/
+Disallow: /auth/confirm
+Disallow: /auth/update-password
+Disallow: /processing/
+Disallow: /results/
+
+# Allow important pages
+Allow: /
+Allow: /pricing
+Allow: /auth
